@@ -203,21 +203,35 @@ async def connect_telegram(request: Request) -> JSONResponse:
             {"error": f"Could not reach Telegram API: {e}"}, status_code=500,
         )
 
-    # Save bot token to .env for OpenClaw
+    # Save bot token to .env
     env_path = Path(PROJECT_ROOT) / ".env"
     lines = env_path.read_text().splitlines() if env_path.exists() else []
 
-    # Add/update the telegram bot token
-    updated = False
+    token_updated = False
     for i, line in enumerate(lines):
         if line.startswith("AP_TELEGRAM_BOT_TOKEN="):
             lines[i] = f"AP_TELEGRAM_BOT_TOKEN={bot_token}"
-            updated = True
+            token_updated = True
             break
-    if not updated:
+    if not token_updated:
         lines.append(f"AP_TELEGRAM_BOT_TOKEN={bot_token}")
     env_path.write_text("\n".join(lines) + "\n")
 
+    # Restart OpenClaw container with the new token
+    import asyncio
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "compose", "up", "-d", "openclaw", "--force-recreate",
+            cwd=PROJECT_ROOT,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await proc.wait()
+    except Exception:
+        pass  # Best effort — user can restart manually
+
     msg = f"Connected to @{bot_username} ({bot_name}). "
-    msg += "Open Telegram and send a message to your bot!"
+    msg += "OpenClaw is restarting with your bot. "
+    msg += "Send a message to your bot in Telegram!"
     return JSONResponse({"status": "connected", "message": msg})

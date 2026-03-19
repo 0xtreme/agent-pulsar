@@ -34,6 +34,7 @@ services:
       - OPENCLAW_GATEWAY_PORT=18789
       - OPENCLAW_BRIDGE_PORT=18790
       - OPENCLAW_GATEWAY_BIND=lan
+      - TELEGRAM_BOT_TOKEN=${AP_TELEGRAM_BOT_TOKEN:-}
     volumes:
       - openclaw_home:/home/user
       - ./skills/agent-pulsar:/workspace/skills/agent-pulsar:ro
