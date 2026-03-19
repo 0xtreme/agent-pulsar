@@ -17,8 +17,15 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # --- Required ---
-    anthropic_api_key: str
+    # --- LLM Authentication (one of these is required) ---
+    anthropic_api_key: str = ""  # Anthropic API key (sk-ant-...)
+    llm_provider: str = "anthropic"  # "anthropic", "openai", or "gemini"
+
+    # OpenAI (set llm_provider=openai)
+    openai_api_key: str = ""
+
+    # Google Gemini (set llm_provider=gemini)
+    gemini_api_key: str = ""
 
     # --- Redis ---
     redis_url: str = "redis://localhost:6379/0"

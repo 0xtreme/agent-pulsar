@@ -12,8 +12,6 @@ import asyncio
 import logging
 import sys
 
-from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
-
 from agent_pulsar.config import get_settings
 from agent_pulsar.event_bus.redis_streams import RedisStreamsBus
 from agent_pulsar.workers.email_worker import EmailWorker
@@ -56,34 +54,10 @@ async def main(worker_type: str) -> None:
     event_bus = RedisStreamsBus(settings.redis_url, settings.event_bus_poll_ms)
     await event_bus.connect()
 
-    # Create LiteLLM router
-    litellm_router = LiteLLMRouter(
-        model_list=[
-            {
-                "model_name": "claude-haiku-4-5-20250414",
-                "litellm_params": {
-                    "model": "claude-haiku-4-5-20250414",
-                    "api_key": settings.anthropic_api_key,
-                },
-            },
-            {
-                "model_name": "claude-sonnet-4-0-20250514",
-                "litellm_params": {
-                    "model": "claude-sonnet-4-0-20250514",
-                    "api_key": settings.anthropic_api_key,
-                },
-            },
-            {
-                "model_name": "claude-opus-4-0-20250514",
-                "litellm_params": {
-                    "model": "claude-opus-4-0-20250514",
-                    "api_key": settings.anthropic_api_key,
-                },
-            },
-        ],
-        num_retries=2,
-        timeout=120,
-    )
+    # Create LiteLLM router (reuse supervisor's factory)
+    from agent_pulsar.supervisor.app import _create_litellm_router
+
+    litellm_router = _create_litellm_router(settings)
 
     # Create worker
     worker = worker_config["class"]()

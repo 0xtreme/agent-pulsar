@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Maps complexity tiers to default model assignments
+# Maps complexity tiers to role-based model names (provider-agnostic)
 MODEL_TIERS: dict[ComplexityTier, str] = {
-    ComplexityTier.SIMPLE: "claude-haiku-4-5-20250414",
-    ComplexityTier.MODERATE: "claude-sonnet-4-0-20250514",
-    ComplexityTier.COMPLEX: "claude-opus-4-0-20250514",
+    ComplexityTier.SIMPLE: "fast-model",
+    ComplexityTier.MODERATE: "balanced-model",
+    ComplexityTier.COMPLEX: "capable-model",
 }
 
 # Ordered by capability (lowest to highest)

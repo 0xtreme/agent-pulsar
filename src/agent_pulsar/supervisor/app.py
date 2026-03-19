@@ -29,35 +29,73 @@ from agent_pulsar.supervisor.scheduler import TaskScheduler
 logger = logging.getLogger(__name__)
 
 
-def _create_litellm_router(api_key: str) -> LiteLLMRouter:
-    """Create a LiteLLM Router with Claude models."""
-    return LiteLLMRouter(
-        model_list=[
-            {
-                "model_name": "claude-haiku-4-5-20250414",
+def _create_litellm_router(settings: Any) -> LiteLLMRouter:
+    """Create a LiteLLM Router with LLM models.
+
+    Supports three providers via LiteLLM:
+    - anthropic: Anthropic API key → Claude models (default)
+    - openai: OpenAI API key → GPT models
+    - gemini: Google Gemini API key → Gemini models
+    """
+    provider = settings.llm_provider
+    model_list = []
+
+    if provider == "openai":
+        for model, role in [
+            ("gpt-4o-mini", "fast"),
+            ("gpt-4o", "balanced"),
+            ("gpt-4o", "capable"),
+        ]:
+            model_list.append({
+                "model_name": f"{role}-model",
                 "litellm_params": {
-                    "model": "claude-haiku-4-5-20250414",
-                    "api_key": api_key,
+                    "model": model,
+                    "api_key": settings.openai_api_key,
                 },
-            },
-            {
-                "model_name": "claude-sonnet-4-0-20250514",
+            })
+    elif provider == "gemini":
+        for model, role in [
+            ("gemini/gemini-2.0-flash", "fast"),
+            ("gemini/gemini-2.5-pro", "balanced"),
+            ("gemini/gemini-2.5-pro", "capable"),
+        ]:
+            model_list.append({
+                "model_name": f"{role}-model",
                 "litellm_params": {
-                    "model": "claude-sonnet-4-0-20250514",
-                    "api_key": api_key,
+                    "model": model,
+                    "api_key": settings.gemini_api_key,
                 },
-            },
-            {
-                "model_name": "claude-opus-4-0-20250514",
+            })
+    else:  # anthropic (default)
+        for model, role in [
+            ("claude-haiku-4-5-20250414", "fast"),
+            ("claude-sonnet-4-0-20250514", "balanced"),
+            ("claude-opus-4-0-20250514", "capable"),
+        ]:
+            model_list.append({
+                "model_name": f"{role}-model",
                 "litellm_params": {
-                    "model": "claude-opus-4-0-20250514",
-                    "api_key": api_key,
+                    "model": model,
+                    "api_key": settings.anthropic_api_key,
                 },
-            },
-        ],
-        num_retries=2,
-        timeout=120,
-    )
+            })
+
+        # Also register by original model name for backward compat
+        for model in [
+            "claude-haiku-4-5-20250414",
+            "claude-sonnet-4-0-20250514",
+            "claude-opus-4-0-20250514",
+        ]:
+            model_list.append({
+                "model_name": model,
+                "litellm_params": {
+                    "model": model,
+                    "api_key": settings.anthropic_api_key,
+                },
+            })
+
+    logger.info("LLM provider: %s (%d models configured)", provider, len(model_list))
+    return LiteLLMRouter(model_list=model_list, num_retries=2, timeout=120)
 
 
 @asynccontextmanager
@@ -81,7 +119,7 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     app.state.repository = repository
 
     # LiteLLM
-    litellm_router = _create_litellm_router(settings.anthropic_api_key)
+    litellm_router = _create_litellm_router(settings)
 
     # Components
     registry = create_default_registry()

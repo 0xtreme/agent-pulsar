@@ -73,35 +73,54 @@ async def step_configure(request: Request) -> HTMLResponse:
 
 @router.post("/setup/2/save")
 async def save_config(request: Request) -> JSONResponse:
-    """Save configuration to .env file."""
+    """Save LLM configuration to .env file."""
     form = await request.form()
-    api_key = str(form.get("api_key", ""))
+    provider = str(form.get("provider", "anthropic"))
 
-    if not api_key.startswith("sk-"):
-        return JSONResponse({"error": "Invalid API key format"}, status_code=400)
+    # Validate based on provider
+    settings: dict[str, str] = {}
+    if provider == "anthropic":
+        api_key = str(form.get("api_key", ""))
+        if not api_key.startswith("sk-"):
+            return JSONResponse({"error": "API key must start with sk-"}, status_code=400)
+        settings["AP_ANTHROPIC_API_KEY"] = api_key
+        settings["AP_LLM_PROVIDER"] = "anthropic"
+    elif provider == "openai":
+        api_key = str(form.get("openai_api_key", ""))
+        if not api_key.startswith("sk-"):
+            return JSONResponse({"error": "API key must start with sk-"}, status_code=400)
+        settings["AP_LLM_PROVIDER"] = "openai"
+        settings["AP_OPENAI_API_KEY"] = api_key
+    elif provider == "gemini":
+        api_key = str(form.get("gemini_api_key", ""))
+        if not api_key:
+            return JSONResponse({"error": "Gemini API key is required"}, status_code=400)
+        settings["AP_LLM_PROVIDER"] = "gemini"
+        settings["AP_GEMINI_API_KEY"] = api_key
+    else:
+        return JSONResponse({"error": f"Unknown provider: {provider}"}, status_code=400)
 
+    # Write to .env
     env_path = Path(PROJECT_ROOT) / ".env"
     example_path = Path(PROJECT_ROOT) / ".env.example"
 
-    # Start from example if .env doesn't exist
     if not env_path.exists() and example_path.exists():
         env_path.write_text(example_path.read_text())
+    elif not env_path.exists():
+        env_path.write_text("")
 
-    # Update the API key in .env
-    if env_path.exists():
-        lines = env_path.read_text().splitlines()
+    lines = env_path.read_text().splitlines()
+    for key, value in settings.items():
         updated = False
         for i, line in enumerate(lines):
-            if line.startswith("AP_ANTHROPIC_API_KEY="):
-                lines[i] = f"AP_ANTHROPIC_API_KEY={api_key}"
+            if line.startswith(f"{key}=") or line.startswith(f"# {key}="):
+                lines[i] = f"{key}={value}"
                 updated = True
                 break
         if not updated:
-            lines.append(f"AP_ANTHROPIC_API_KEY={api_key}")
-        env_path.write_text("\n".join(lines) + "\n")
-    else:
-        env_path.write_text(f"AP_ANTHROPIC_API_KEY={api_key}\n")
+            lines.append(f"{key}={value}")
 
+    env_path.write_text("\n".join(lines) + "\n")
     return JSONResponse({"status": "saved"})
 
 

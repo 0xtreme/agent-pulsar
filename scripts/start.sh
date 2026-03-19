@@ -13,6 +13,9 @@
 
 set -euo pipefail
 
+# Ensure common binary paths are available
+export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -105,8 +108,10 @@ start_services() {
         err ".env file not found. Run: cp .env.example .env && edit .env"
         exit 1
     fi
-    if ! grep -q "AP_ANTHROPIC_API_KEY=sk-" .env 2>/dev/null; then
-        warn "AP_ANTHROPIC_API_KEY may not be set in .env — LLM calls will fail"
+    # Check that at least one auth method is configured
+    if ! grep -qE "AP_ANTHROPIC_API_KEY=sk-|AP_OPENAI_API_KEY=sk-|AP_GEMINI_API_KEY=AIza" .env 2>/dev/null; then
+        warn "No LLM API key configured in .env"
+        warn "Run the setup wizard for guided config: uv run python scripts/run_setup_wizard.py"
     fi
 
     mkdir -p "$PID_DIR" "$LOG_DIR"

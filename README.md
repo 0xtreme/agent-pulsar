@@ -10,32 +10,52 @@ Agent Pulsar decomposes complex tasks into isolated, ephemeral sub-tasks, select
 
 | Tool | Install |
 |------|---------|
-| **Python 3.12+** | Installed automatically by uv |
-| **uv** | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| **Docker Desktop** | [docker.com/get-started](https://docker.com/get-started) |
-| **Anthropic API key** | [console.anthropic.com](https://console.anthropic.com) |
+| **Docker Desktop** | [docker.com/get-started](https://docker.com/get-started) — must be running |
+| **Anthropic API key** OR **Google Cloud** OR **AWS** | See authentication options below |
 
-### 1. Clone and configure
+That's it. Everything else is installed automatically.
+
+### 1. Clone the repo
 
 ```bash
 git clone https://github.com/0xtreme/agent-pulsar.git
 cd agent-pulsar
+```
+
+### 2. Run the setup wizard (recommended)
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # Install uv (if you don't have it)
+source ~/.local/bin/env                              # Add uv to PATH
+uv sync --all-extras                                 # Install dependencies
+uv run python scripts/run_setup_wizard.py            # Start the wizard
+```
+
+Open **http://localhost:8103** in your browser. The wizard walks you through:
+1. Prerequisite checks (Docker, Python, etc.)
+2. Authentication setup (API key, Vertex AI, or Bedrock)
+3. Starting services
+4. Testing with your first task
+
+### 2b. Manual setup (alternative)
+
+If you prefer the command line:
+
+```bash
+# Install uv if needed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.local/bin/env
+
+# Install dependencies
+uv sync --all-extras
+
+# Configure
 cp .env.example .env
-```
+# Edit .env — set your auth method (see "Authentication" below)
 
-Edit `.env` and set your Anthropic API key:
-
-```bash
-AP_ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
-### 2. Start everything
-
-```bash
+# Start everything
 ./scripts/start.sh
 ```
-
-This starts Redis, PostgreSQL, runs database migrations, launches the Supervisor (port 8100), and starts the Email and Research workers. All in one command.
 
 ### 3. Submit a task
 
@@ -43,28 +63,56 @@ This starts Redis, PostgreSQL, runs database migrations, launches the Supervisor
 curl -X POST http://localhost:8100/tasks \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "pavi",
+    "user_id": "you",
     "conversation_id": "test-1",
     "intent": "research.summarize",
-    "raw_message": "Research the latest trends in AI agent frameworks and email me a summary",
+    "raw_message": "Research the latest trends in AI agent frameworks",
     "params": {},
     "priority": "normal"
   }'
 ```
 
-You'll get back a `request_id`. The Supervisor decomposes this into sub-tasks (research + email), routes them to workers, and executes them.
-
-### 4. Check status
+You'll get back a `request_id`. Check status:
 
 ```bash
 curl http://localhost:8100/tasks/<request_id>
 ```
 
-### 5. Stop
+### 4. Stop
 
 ```bash
 ./scripts/start.sh stop
 ```
+
+## Authentication
+
+Agent Pulsar supports three LLM providers via [LiteLLM](https://github.com/BerriAI/litellm). Pick whichever you have a subscription or API key for:
+
+### Option A: Anthropic (default)
+
+```bash
+AP_ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+Get a key at [console.anthropic.com](https://console.anthropic.com). Uses Claude Haiku / Sonnet / Opus.
+
+### Option B: OpenAI
+
+```bash
+AP_LLM_PROVIDER=openai
+AP_OPENAI_API_KEY=sk-your-key-here
+```
+
+Get a key at [platform.openai.com](https://platform.openai.com/api-keys). Uses GPT-4o-mini / GPT-4o.
+
+### Option C: Google Gemini
+
+```bash
+AP_LLM_PROVIDER=gemini
+AP_GEMINI_API_KEY=AIza-your-key-here
+```
+
+Get a key at [aistudio.google.com](https://aistudio.google.com/apikey). Uses Gemini Flash / Pro.
 
 ## How It Works
 
@@ -77,7 +125,7 @@ You (Telegram/Slack/...) --> OpenClaw --> Agent Pulsar Skill
                                         /    |    \
                                    Decompose  Route  Assign Model
                                               |
-                                    Worker (Email/Research/Payroll/Calendar)
+                                         Worker executes task
                                               |
                                          Result --> Back to you
 ```
@@ -89,55 +137,44 @@ You (Telegram/Slack/...) --> OpenClaw --> Agent Pulsar Skill
 5. **Workers** execute each sub-task in isolation (hot/warm/cold tier depending on sensitivity)
 6. **Results** flow back through the event bus to you
 
-## Architecture
+## Dynamic Task Routing
 
-| Layer | What | How |
-|-------|------|-----|
-| **Chat** | OpenClaw (leveraged) | 20+ channels, conversation management, skills system |
-| **Event Bus** | Redis Streams (built) | Durable, ordered messaging with consumer groups and DLQ |
-| **Supervisor** | FastAPI (built) | Task decomposition, model routing, execution tier assignment |
-| **Workers** | Ephemeral (built) | Stateless, single-task, isolated — zero cross-task memory |
-| **Security** | Vault + Token Broker (built) | Scoped JWT tokens, credential isolation, one-time onboarding |
-| **LLM Gateway** | LiteLLM (leveraged) | Unified API across Claude, GPT, Llama with cost tracking |
+You can ask Agent Pulsar to do **anything** — not just predefined task types. The system dynamically figures out what to do:
 
-## Available Workers
+```bash
+# These all work:
+"Research quantum computing trends"          # → Research Worker
+"Draft a thank you email to the team"        # → Email Worker
+"Find me a pasta recipe for dinner"          # → General Worker (handles anything)
+"Translate this document to Spanish"         # → General Worker
+"Run payroll for March"                      # → Payroll Worker (cold tier, isolated)
+```
+
+Specialized workers handle known domains (email, research, payroll, calendar) with optimized prompts and execution tiers. Everything else routes to the **General Worker**, which uses Sonnet to handle any task dynamically.
+
+## Workers
 
 | Worker | Tier | Capability | What it does |
 |--------|------|-----------|--------------|
+| **General** | Hot (~100ms) | Moderate | Handles any task type dynamically |
 | **Email** | Hot (~100ms) | Simple | Drafts professional emails |
 | **Research** | Warm (~1-2s) | Moderate | Researches topics, produces summaries |
 | **Payroll** | Cold (~5-10s) | Complex | Payroll operations with full Docker isolation |
 | **Calendar** | Hot (~100ms) | Simple | Calendar reads and event management |
 
-## Available Task Types
-
-Use these as the `intent` when submitting tasks:
-
-| Intent | Worker | Description |
-|--------|--------|-------------|
-| `email.send` | Email | Send an email |
-| `email.draft` | Email | Draft an email without sending |
-| `research.summarize` | Research | Research a topic and summarize |
-| `research.analyze` | Research | Deep analysis of a topic |
-| `payroll.run` | Payroll | Run payroll for a company/period |
-| `payroll.fetch_employees` | Payroll | Fetch employee list |
-| `calendar.read` | Calendar | List calendar events |
-| `calendar.create_event` | Calendar | Create a new event |
-
 ## Configuration
 
-All settings use the `AP_` environment variable prefix. Key settings:
+All settings use the `AP_` environment variable prefix. Only authentication is required — everything else has defaults:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AP_ANTHROPIC_API_KEY` | (required) | Your Anthropic API key |
-| `AP_REDIS_URL` | `redis://localhost:6379/0` | Redis connection |
-| `AP_DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection |
+| `AP_ANTHROPIC_API_KEY` | — | Anthropic API key (if using direct API) |
+| `AP_LLM_PROVIDER` | `anthropic` | `anthropic`, `vertex_ai`, or `bedrock` |
 | `AP_SUPERVISOR_PORT` | `8100` | Supervisor API port |
 | `AP_DECOMPOSITION_MODEL` | `claude-opus-4-0-20250514` | Model for task decomposition |
 | `AP_CLASSIFICATION_MODEL` | `claude-haiku-4-5-20250414` | Model for complexity classification |
 
-See `.env.example` for the full list.
+See `.env.example` for the full list with all options.
 
 ## Connecting OpenClaw (Telegram)
 
@@ -167,7 +204,7 @@ uv run uvicorn agent_pulsar.config_portal.app:app --port 8102
 # Generate a one-time onboarding link
 curl -X POST http://localhost:8102/api/links/generate \
   -H "Content-Type: application/json" \
-  -d '{"user_id": "pavi", "service": "xero"}'
+  -d '{"user_id": "you", "service": "xero"}'
 ```
 
 Open the returned URL in your browser, enter your API credentials. They're stored securely in Vault (or in-memory for dev mode).
@@ -175,14 +212,16 @@ Open the returned URL in your browser, enter your API credentials. They're store
 ## Useful Commands
 
 ```bash
-./scripts/start.sh              # Start everything
-./scripts/start.sh stop         # Stop everything
-./scripts/start.sh status       # Check what's running
+./scripts/start.sh                # Start everything
+./scripts/start.sh stop           # Stop everything
+./scripts/start.sh status         # Check what's running
 
-tail -f .logs/supervisor.log    # Watch supervisor logs
-tail -f .logs/worker-email.log  # Watch email worker logs
+uv run python scripts/run_setup_wizard.py   # Setup wizard (http://localhost:8103)
 
-curl http://localhost:8100/health   # Health check
+tail -f .logs/supervisor.log      # Watch supervisor logs
+tail -f .logs/worker-general.log  # Watch general worker logs
+
+curl http://localhost:8100/health  # Health check
 ```
 
 ## Project Structure
@@ -191,9 +230,10 @@ curl http://localhost:8100/health   # Health check
 agent-pulsar/
   src/agent_pulsar/
     supervisor/       # Control plane: decomposition, routing, scheduling
-    workers/          # Execution plane: email, research, payroll, calendar
+    workers/          # Execution plane: general, email, research, payroll, calendar
     security/         # Vault client, Token Broker, credential providers
     config_portal/    # Web UI for credential onboarding
+    setup_wizard/     # Web-based setup guide for first-time users
     event_bus/        # Redis Streams event bus abstraction
     persistence/      # PostgreSQL task state (SQLAlchemy + Alembic)
     schemas/          # Pydantic models for all events and enums
@@ -207,6 +247,7 @@ agent-pulsar/
     development-guide.md  # Developer setup guide
   scripts/
     start.sh          # One-command startup
+    run_setup_wizard.py  # Setup wizard launcher
     run_worker.py     # Individual worker launcher
   docker/
     payroll/Dockerfile  # Cold-tier payroll worker image
