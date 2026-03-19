@@ -26,6 +26,36 @@ diluting the model's attention. Small, focused context = reliable agent.
 
 ---
 
+## Pain Point Validation
+
+Before jumping to multi-agent as the solution, we need to be honest about which
+problems actually require it vs. which are solvable other ways.
+
+| Pain Point | Multi-agent needed? | Real solution |
+|---|---|---|
+| Credential security | **No** | Vault + MCP + Token Broker (already designed) |
+| Hallucination | **Partially** | Small, relevant context (achievable either way) |
+| Context confusion | **Yes** | Structural isolation between domains |
+| Degradation over time | **Yes** | Capped memory per agent, no unbounded growth |
+| Catastrophic actions | **Partially** | Guardrails + approval flows (not agent count) |
+| Coordination reliability | **Multi-agent makes this WORSE** | Need strong deterministic supervisor |
+
+**The genuine case for multi-agent:** Context confusion and degradation over time.
+These are the problems that destroy user trust. Once the assistant mixes up your
+work and personal contexts, or forgets things it knew last week, you stop using it.
+
+**The honest tradeoff:** Multi-agent swaps one type of unreliability (context rot)
+for another (coordination complexity). The deterministic supervisor is how we
+manage that tradeoff — it needs to be rock-solid because it's the foundation
+everything else rests on.
+
+**What multi-agent does NOT solve on its own:**
+- Security → already handled by Vault + MCP credential scoping
+- Hallucination → caused by model limits, not architecture
+- Rogue actions → needs guardrails and human-in-the-loop, not more agents
+
+---
+
 ## The Opportunity
 
 Nobody has combined these three things:
