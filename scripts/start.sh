@@ -72,7 +72,8 @@ check_status() {
     fi
 
     # Python services
-    for pidfile in "$PID_DIR"/*.pid 2>/dev/null; do
+    if [ -d "$PID_DIR" ]; then
+    for pidfile in "$PID_DIR"/*.pid; do
         [ -f "$pidfile" ] || continue
         pid=$(cat "$pidfile")
         name=$(basename "$pidfile" .pid)
@@ -82,6 +83,7 @@ check_status() {
             err "$name: not running (stale pid $pid)"
         fi
     done
+    fi
 
     # Health check
     if curl -sf http://localhost:8100/health >/dev/null 2>&1; then
