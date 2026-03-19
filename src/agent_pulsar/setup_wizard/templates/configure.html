@@ -2,81 +2,124 @@
 {% block title %}Configure{% endblock %}
 {% block content %}
 <div class="card">
-    <h1>Step 2: Configure</h1>
-    <h2>Choose your LLM provider.</h2>
+    <h1>Step 2: Connect to an LLM</h1>
+    <h2>Sign in with your LLM provider or enter an API key.</h2>
 
-    {% if has_key %}
-    <div class="check-item">
+    {% if detected %}
+    <div class="check-item" style="border: 1px solid #22c55e;">
         <span class="check-icon check-pass">&#10003;</span>
         <div>
-            <div class="check-name">Already configured</div>
-            <div class="check-msg">Found in .env file. Update below or skip to the next step.</div>
+            <div class="check-name">{{ detected.provider }} detected</div>
+            <div class="check-msg">Found credentials in your {{ detected.source }}. You can skip to the next step or configure a different provider below.</div>
+        </div>
+    </div>
+    {% elif configured %}
+    <div class="check-item" style="border: 1px solid #22c55e;">
+        <span class="check-icon check-pass">&#10003;</span>
+        <div>
+            <div class="check-name">{{ configured.provider }} configured</div>
+            <div class="check-msg">Found in {{ configured.source }}. You can skip to the next step or update below.</div>
         </div>
     </div>
     {% endif %}
 
-    <div style="margin-bottom: 1rem;">
-        <label>Provider</label>
-        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-            <button type="button" class="btn btn-primary" id="tab-anthropic" onclick="showTab('anthropic')" style="flex:1; padding: 0.5rem;">Anthropic</button>
-            <button type="button" class="btn btn-secondary" id="tab-openai" onclick="showTab('openai')" style="flex:1; padding: 0.5rem;">OpenAI</button>
-            <button type="button" class="btn btn-secondary" id="tab-gemini" onclick="showTab('gemini')" style="flex:1; padding: 0.5rem;">Google Gemini</button>
+    <!-- Sign In Buttons -->
+    <div style="margin: 1.5rem 0;">
+        <label style="margin-bottom: 0.75rem;">Sign in with your provider</label>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <button class="btn btn-secondary" onclick="signIn('anthropic')" style="text-align: left; padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.2rem; width: 1.5rem; text-align: center;">&#9889;</span>
+                <div>
+                    <div style="font-weight: 600;">Sign in with Anthropic</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">Claude Haiku / Sonnet / Opus</div>
+                </div>
+            </button>
+            <button class="btn btn-secondary" onclick="signIn('openai')" style="text-align: left; padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.2rem; width: 1.5rem; text-align: center;">&#9679;</span>
+                <div>
+                    <div style="font-weight: 600;">Sign in with OpenAI</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">GPT-4o / GPT-4o-mini</div>
+                </div>
+            </button>
+            <button class="btn btn-secondary" onclick="signIn('gemini')" style="text-align: left; padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.2rem; width: 1.5rem; text-align: center;">&#9670;</span>
+                <div>
+                    <div style="font-weight: 600;">Sign in with Google</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">Gemini Flash / Pro</div>
+                </div>
+            </button>
         </div>
     </div>
 
-    <!-- Anthropic Tab -->
-    <form id="form-anthropic" onsubmit="return saveConfig(event, 'anthropic')">
-        <label for="api_key">Anthropic API Key</label>
-        <input type="password" id="api_key" name="api_key" placeholder="sk-ant-..." {% if has_key %}value="sk-ant-***"{% endif %}>
-        <p style="font-size: 0.85rem;">Get a key at <a href="https://console.anthropic.com" target="_blank" style="color: #818cf8;">console.anthropic.com</a></p>
-        <button type="submit" class="btn btn-primary btn-full">Save</button>
-    </form>
-
-    <!-- OpenAI Tab -->
-    <form id="form-openai" style="display:none;" onsubmit="return saveConfig(event, 'openai')">
-        <label for="openai_key">OpenAI API Key</label>
-        <input type="password" id="openai_key" name="openai_api_key" placeholder="sk-...">
-        <p style="font-size: 0.85rem;">Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #818cf8;">platform.openai.com</a></p>
-        <button type="submit" class="btn btn-primary btn-full">Save</button>
-    </form>
-
-    <!-- Gemini Tab -->
-    <form id="form-gemini" style="display:none;" onsubmit="return saveConfig(event, 'gemini')">
-        <label for="gemini_key">Google Gemini API Key</label>
-        <input type="password" id="gemini_key" name="gemini_api_key" placeholder="AIza...">
-        <p style="font-size: 0.85rem;">Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #818cf8;">aistudio.google.com</a></p>
-        <button type="submit" class="btn btn-primary btn-full">Save</button>
-    </form>
+    <!-- Key Entry (shown after sign-in click) -->
+    <div id="key-entry" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #334155;">
+        <p id="key-instructions" style="font-size: 0.9rem; margin-bottom: 1rem;"></p>
+        <form id="keyForm" onsubmit="return submitKey(event)">
+            <input type="hidden" id="provider" name="provider">
+            <label for="the_key" id="key-label">API Key</label>
+            <input type="password" id="the_key" name="the_key" placeholder="">
+            <button type="submit" class="btn btn-primary btn-full">Connect</button>
+        </form>
+    </div>
 
     <div id="saveStatus" style="margin-top: 1rem;"></div>
 </div>
 
 <p style="font-size: 0.85rem; margin-bottom: 1rem;">
-    <strong>That's the only required configuration.</strong> Redis, PostgreSQL, model selection, and all other settings have sensible defaults. See <code>.env.example</code> for the full list.
+    <strong>That's the only required configuration.</strong> Everything else has sensible defaults.
 </p>
 
 <div class="nav">
     <a href="/setup/1" class="btn btn-secondary">&larr; Back</a>
-    <a href="/setup/3" class="btn btn-secondary" id="nextBtn">Next: Start Services &rarr;</a>
+    <a href="/setup/3" class="btn btn-primary" id="nextBtn">Next: Start Services &rarr;</a>
 </div>
 
 <script>
-function showTab(tab) {
-    document.querySelectorAll('[id^="form-"]').forEach(f => f.style.display = 'none');
-    document.querySelectorAll('[id^="tab-"]').forEach(b => b.className = 'btn btn-secondary');
-    document.getElementById('form-' + tab).style.display = 'block';
-    document.getElementById('tab-' + tab).className = 'btn btn-primary';
+const providers = {
+    anthropic: {
+        url: 'https://console.anthropic.com/settings/keys',
+        label: 'Anthropic API Key',
+        placeholder: 'sk-ant-...',
+        field: 'api_key',
+        instructions: 'A new tab will open to Anthropic Console. Create or copy your API key, then paste it below.',
+    },
+    openai: {
+        url: 'https://platform.openai.com/api-keys',
+        label: 'OpenAI API Key',
+        placeholder: 'sk-...',
+        field: 'openai_api_key',
+        instructions: 'A new tab will open to OpenAI. Create or copy your API key, then paste it below.',
+    },
+    gemini: {
+        url: 'https://aistudio.google.com/apikey',
+        label: 'Google Gemini API Key',
+        placeholder: 'AIza...',
+        field: 'gemini_api_key',
+        instructions: 'A new tab will open to Google AI Studio. Create or copy your API key, then paste it below.',
+    },
+};
+
+function signIn(provider) {
+    const p = providers[provider];
+    window.open(p.url, '_blank');
+
+    document.getElementById('key-entry').style.display = 'block';
+    document.getElementById('key-instructions').textContent = p.instructions;
+    document.getElementById('key-label').textContent = p.label;
+    document.getElementById('the_key').placeholder = p.placeholder;
+    document.getElementById('the_key').name = p.field;
+    document.getElementById('provider').value = provider;
+    document.getElementById('the_key').focus();
 }
 
-async function saveConfig(e, provider) {
+async function submitKey(e) {
     e.preventDefault();
-    const status = document.getElementById('saveStatus');
     const form = e.target;
     const formData = new FormData(form);
-    formData.append('provider', provider);
-
     const btn = form.querySelector('button[type="submit"]');
-    btn.textContent = 'Saving...';
+    const status = document.getElementById('saveStatus');
+
+    btn.textContent = 'Connecting...';
     btn.disabled = true;
 
     const resp = await fetch('/setup/2/save', {
@@ -85,8 +128,9 @@ async function saveConfig(e, provider) {
     });
 
     if (resp.ok) {
-        status.innerHTML = '<div class="check-item"><span class="check-icon check-pass">&#10003;</span><div><div class="check-name">Configuration saved</div><div class="check-msg">Settings written to .env</div></div></div>';
-        btn.textContent = 'Saved!';
+        status.innerHTML = '<div class="check-item" style="border: 1px solid #22c55e;"><span class="check-icon check-pass">&#10003;</span><div><div class="check-name">Connected!</div><div class="check-msg">Credentials saved. You\'re ready to continue.</div></div></div>';
+        btn.textContent = 'Connected!';
+        document.getElementById('key-entry').style.display = 'none';
     } else {
         const data = await resp.json();
         status.innerHTML = `<div class="check-item"><span class="check-icon check-fail">&#10007;</span><div><div class="check-name">Error</div><div class="check-msg">${data.error}</div></div></div>`;

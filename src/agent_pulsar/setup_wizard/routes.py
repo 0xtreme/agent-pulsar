@@ -56,19 +56,55 @@ async def check_prerequisites() -> JSONResponse:
 @router.get("/setup/2", response_class=HTMLResponse)
 async def step_configure(request: Request) -> HTMLResponse:
     """Step 2: Configuration."""
-    # Read current .env if it exists
-    env_path = Path(PROJECT_ROOT) / ".env"
-    current_key = ""
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            if line.startswith("AP_ANTHROPIC_API_KEY="):
-                current_key = line.split("=", 1)[1]
-                break
+    detected = _detect_existing_auth()
+    configured = _check_env_configured()
     return templates.TemplateResponse(
         request=request,
         name="configure.html",
-        context={"step": 2, "has_key": bool(current_key and current_key.startswith("sk-"))},
+        context={
+            "step": 2,
+            "detected": detected,
+            "configured": configured,
+        },
     )
+
+
+def _detect_existing_auth() -> dict[str, str] | None:
+    """Check if LLM credentials already exist in environment."""
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if anthropic_key and len(anthropic_key) > 5:
+        return {"provider": "Anthropic (Claude Code)", "source": "environment"}
+
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if openai_key and openai_key.startswith("sk-"):
+        return {"provider": "OpenAI", "source": "environment"}
+
+    google_key = os.environ.get("GEMINI_API_KEY", "") or os.environ.get(
+        "GOOGLE_API_KEY", ""
+    )
+    if google_key:
+        return {"provider": "Google Gemini", "source": "environment"}
+
+    return None
+
+
+def _check_env_configured() -> dict[str, str] | None:
+    """Check if .env already has LLM auth configured."""
+    env_path = Path(PROJECT_ROOT) / ".env"
+    if not env_path.exists():
+        return None
+    content = env_path.read_text()
+    for line in content.splitlines():
+        line = line.strip()
+        if line.startswith("#"):
+            continue
+        if line.startswith("AP_ANTHROPIC_API_KEY=sk-"):
+            return {"provider": "Anthropic", "source": ".env"}
+        if line.startswith("AP_OPENAI_API_KEY=sk-"):
+            return {"provider": "OpenAI", "source": ".env"}
+        if line.startswith("AP_GEMINI_API_KEY=") and not line.endswith("="):
+            return {"provider": "Google Gemini", "source": ".env"}
+    return None
 
 
 @router.post("/setup/2/save")
