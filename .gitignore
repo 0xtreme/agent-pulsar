@@ -44,3 +44,7 @@ uv.lock
 
 # Alembic
 alembic/versions/__pycache__/
+
+# Runtime
+.pids/
+.logs/

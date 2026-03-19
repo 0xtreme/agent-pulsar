@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+# Agent Pulsar — Start all services locally
+#
+# Usage:
+#   ./scripts/start.sh          # Start everything
+#   ./scripts/start.sh stop     # Stop everything
+#   ./scripts/start.sh status   # Check service status
+#
+# Prerequisites:
+#   - uv (Python package manager)
+#   - Docker + Docker Compose
+#   - .env file with AP_ANTHROPIC_API_KEY set
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT_DIR"
+
+PID_DIR="$ROOT_DIR/.pids"
+LOG_DIR="$ROOT_DIR/.logs"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No color
+
+log() { echo -e "${CYAN}[Agent Pulsar]${NC} $1"; }
+ok()  { echo -e "${GREEN}  ✓${NC} $1"; }
+err() { echo -e "${RED}  ✗${NC} $1"; }
+warn(){ echo -e "${YELLOW}  !${NC} $1"; }
+
+# --- Stop ---
+stop_services() {
+    log "Stopping Agent Pulsar..."
+
+    if [ -d "$PID_DIR" ]; then
+        for pidfile in "$PID_DIR"/*.pid; do
+            [ -f "$pidfile" ] || continue
+            pid=$(cat "$pidfile")
+            name=$(basename "$pidfile" .pid)
+            if kill -0 "$pid" 2>/dev/null; then
+                kill "$pid" 2>/dev/null || true
+                ok "Stopped $name (pid $pid)"
+            fi
+            rm -f "$pidfile"
+        done
+    fi
+
+    docker compose down 2>/dev/null || true
+    ok "Docker services stopped"
+    log "All services stopped."
+}
+
+# --- Status ---
+check_status() {
+    log "Service status:"
+
+    # Docker services
+    if docker compose ps --status running 2>/dev/null | grep -q "redis"; then
+        ok "Redis: running"
+    else
+        err "Redis: not running"
+    fi
+    if docker compose ps --status running 2>/dev/null | grep -q "postgres"; then
+        ok "PostgreSQL: running"
+    else
+        err "PostgreSQL: not running"
+    fi
+
+    # Python services
+    for pidfile in "$PID_DIR"/*.pid 2>/dev/null; do
+        [ -f "$pidfile" ] || continue
+        pid=$(cat "$pidfile")
+        name=$(basename "$pidfile" .pid)
+        if kill -0 "$pid" 2>/dev/null; then
+            ok "$name: running (pid $pid)"
+        else
+            err "$name: not running (stale pid $pid)"
+        fi
+    done
+
+    # Health check
+    if curl -sf http://localhost:8100/health >/dev/null 2>&1; then
+        ok "Supervisor API: healthy (http://localhost:8100)"
+    else
+        err "Supervisor API: not reachable"
+    fi
+}
+
+# --- Start ---
+start_services() {
+    log "Starting Agent Pulsar..."
+
+    # Preflight checks
+    if ! command -v uv &>/dev/null; then
+        err "uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh"
+        exit 1
+    fi
+    if ! command -v docker &>/dev/null; then
+        err "Docker not found. Install Docker Desktop: https://docker.com/get-started"
+        exit 1
+    fi
+    if [ ! -f ".env" ]; then
+        err ".env file not found. Run: cp .env.example .env && edit .env"
+        exit 1
+    fi
+    if ! grep -q "AP_ANTHROPIC_API_KEY=sk-" .env 2>/dev/null; then
+        warn "AP_ANTHROPIC_API_KEY may not be set in .env — LLM calls will fail"
+    fi
+
+    mkdir -p "$PID_DIR" "$LOG_DIR"
+
+    # 1. Docker services
+    log "Starting Docker services (Redis + PostgreSQL)..."
+    docker compose up -d
+    ok "Docker services started"
+
+    # Wait for health
+    log "Waiting for services to be healthy..."
+    for i in $(seq 1 15); do
+        if docker compose ps 2>/dev/null | grep -q "healthy.*healthy"; then
+            break
+        fi
+        sleep 1
+    done
+    ok "Redis + PostgreSQL healthy"
+
+    # 2. Install dependencies (if needed)
+    if [ ! -d ".venv" ]; then
+        log "Installing dependencies..."
+        uv sync --all-extras
+        ok "Dependencies installed"
+    fi
+
+    # 3. Run database migrations
+    log "Running database migrations..."
+    uv run alembic upgrade head 2>&1 | tail -1
+    ok "Database migrated"
+
+    # 4. Start Supervisor
+    log "Starting Supervisor (port 8100)..."
+    uv run uvicorn agent_pulsar.supervisor.app:app \
+        --host 0.0.0.0 --port 8100 \
+        > "$LOG_DIR/supervisor.log" 2>&1 &
+    echo $! > "$PID_DIR/supervisor.pid"
+    ok "Supervisor started (pid $(cat "$PID_DIR/supervisor.pid"))"
+
+    # 5. Start workers
+    log "Starting workers..."
+    uv run python scripts/run_worker.py email \
+        > "$LOG_DIR/worker-email.log" 2>&1 &
+    echo $! > "$PID_DIR/worker-email.pid"
+    ok "Email Worker started (pid $(cat "$PID_DIR/worker-email.pid"))"
+
+    uv run python scripts/run_worker.py research \
+        > "$LOG_DIR/worker-research.log" 2>&1 &
+    echo $! > "$PID_DIR/worker-research.pid"
+    ok "Research Worker started (pid $(cat "$PID_DIR/worker-research.pid"))"
+
+    # Wait for supervisor to be ready
+    log "Waiting for Supervisor API..."
+    for i in $(seq 1 10); do
+        if curl -sf http://localhost:8100/health >/dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+
+    echo ""
+    log "Agent Pulsar is running!"
+    echo ""
+    echo -e "  ${GREEN}Supervisor API:${NC}  http://localhost:8100"
+    echo -e "  ${GREEN}Health check:${NC}    http://localhost:8100/health"
+    echo ""
+    echo -e "  ${CYAN}Submit a task:${NC}"
+    echo "    curl -X POST http://localhost:8100/tasks \\"
+    echo "      -H 'Content-Type: application/json' \\"
+    echo "      -d '{\"user_id\": \"pavi\", \"conversation_id\": \"test\", \"intent\": \"research.summarize\", \"raw_message\": \"Research the latest trends in AI agents\", \"params\": {}, \"priority\": \"normal\"}'"
+    echo ""
+    echo -e "  ${CYAN}Check task status:${NC}"
+    echo "    curl http://localhost:8100/tasks/<request_id>"
+    echo ""
+    echo -e "  ${CYAN}View logs:${NC}"
+    echo "    tail -f .logs/supervisor.log"
+    echo "    tail -f .logs/worker-email.log"
+    echo "    tail -f .logs/worker-research.log"
+    echo ""
+    echo -e "  ${CYAN}Stop everything:${NC}"
+    echo "    ./scripts/start.sh stop"
+    echo ""
+}
+
+# --- Main ---
+case "${1:-start}" in
+    start)  start_services ;;
+    stop)   stop_services ;;
+    status) check_status ;;
+    *)
+        echo "Usage: $0 {start|stop|status}"
+        exit 1
+        ;;
+esac
