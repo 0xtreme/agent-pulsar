@@ -60,24 +60,38 @@ async def check_uv() -> CheckResult:
     )
 
 
-async def check_api_key(project_root: str = ".") -> CheckResult:
-    """Check if the Anthropic API key is configured."""
-    # Check environment
-    if os.environ.get("AP_ANTHROPIC_API_KEY", "").startswith("sk-"):
-        return CheckResult("API Key", True, "API key set in environment")
+async def check_llm_auth(project_root: str = ".") -> CheckResult:
+    """Check if any LLM provider is configured."""
+    # Check environment variables
+    env_checks = {
+        "AP_ANTHROPIC_API_KEY": ("Anthropic", "sk-"),
+        "AP_OPENAI_API_KEY": ("OpenAI", "sk-"),
+        "AP_GEMINI_API_KEY": ("Gemini", ""),
+    }
+    for var, (provider, prefix) in env_checks.items():
+        val = os.environ.get(var, "")
+        if val and (not prefix or val.startswith(prefix)):
+            return CheckResult("LLM Auth", True, f"{provider} configured via environment")
 
     # Check .env file
     env_path = Path(project_root) / ".env"
     if env_path.exists():
         content = env_path.read_text()
         for line in content.splitlines():
+            line = line.strip()
+            if line.startswith("#"):
+                continue
             if line.startswith("AP_ANTHROPIC_API_KEY=sk-"):
-                return CheckResult("API Key", True, "API key set in .env")
+                return CheckResult("LLM Auth", True, "Anthropic API key set in .env")
+            if line.startswith("AP_OPENAI_API_KEY=sk-"):
+                return CheckResult("LLM Auth", True, "OpenAI API key set in .env")
+            if line.startswith("AP_GEMINI_API_KEY=") and not line.endswith("="):
+                return CheckResult("LLM Auth", True, "Gemini API key set in .env")
 
     return CheckResult(
-        "API Key", False,
-        "Anthropic API key not configured",
-        "Get a key at https://console.anthropic.com and add it to .env",
+        "LLM Auth", True,
+        "Not yet configured — you'll set this up in the next step",
+        "",
     )
 
 
@@ -121,7 +135,7 @@ async def run_all_checks(project_root: str = ".") -> list[CheckResult]:
     results = await asyncio.gather(
         check_docker(),
         check_uv(),
-        check_api_key(project_root),
+        check_llm_auth(project_root),
         check_redis(),
         check_postgres(),
     )
