@@ -116,20 +116,34 @@ start_services() {
 
     mkdir -p "$PID_DIR" "$LOG_DIR"
 
-    # 1. Docker services
-    log "Starting Docker services (Redis + PostgreSQL)..."
+    # 1. Docker services (Redis + PostgreSQL + OpenClaw)
+    log "Starting Docker services..."
     docker compose up -d
     ok "Docker services started"
 
     # Wait for health
     log "Waiting for services to be healthy..."
-    for i in $(seq 1 15); do
-        if docker compose ps 2>/dev/null | grep -q "healthy.*healthy"; then
+    for i in $(seq 1 20); do
+        if docker compose ps 2>/dev/null | grep -q "healthy"; then
             break
         fi
         sleep 1
     done
     ok "Redis + PostgreSQL healthy"
+
+    # Wait for OpenClaw to be ready
+    log "Waiting for OpenClaw..."
+    for i in $(seq 1 30); do
+        if curl -sf http://localhost:18789 >/dev/null 2>&1; then
+            break
+        fi
+        sleep 2
+    done
+    if curl -sf http://localhost:18789 >/dev/null 2>&1; then
+        ok "OpenClaw running (http://localhost:18789)"
+    else
+        warn "OpenClaw may still be starting — check http://localhost:18789"
+    fi
 
     # 2. Install dependencies (if needed)
     if [ ! -d ".venv" ]; then
@@ -181,23 +195,22 @@ start_services() {
     log "Agent Pulsar is running!"
     echo ""
     echo -e "  ${GREEN}Supervisor API:${NC}  http://localhost:8100"
+    echo -e "  ${GREEN}OpenClaw UI:${NC}     http://localhost:18789"
     echo -e "  ${GREEN}Health check:${NC}    http://localhost:8100/health"
     echo ""
-    echo -e "  ${CYAN}Submit a task:${NC}"
+    echo -e "  ${CYAN}Connect Telegram:${NC}"
+    echo "    1. Open http://localhost:18789 in your browser"
+    echo "    2. Go to Channels > Telegram"
+    echo "    3. Enter your Telegram bot token (get one from @BotFather)"
+    echo "    4. Send a message to your bot — Agent Pulsar handles the rest"
+    echo ""
+    echo -e "  ${CYAN}Or submit a task directly:${NC}"
     echo "    curl -X POST http://localhost:8100/tasks \\"
     echo "      -H 'Content-Type: application/json' \\"
-    echo "      -d '{\"user_id\": \"pavi\", \"conversation_id\": \"test\", \"intent\": \"research.summarize\", \"raw_message\": \"Research the latest trends in AI agents\", \"params\": {}, \"priority\": \"normal\"}'"
+    echo "      -d '{\"user_id\": \"you\", \"conversation_id\": \"test\", \"intent\": \"research.summarize\", \"raw_message\": \"Research AI agents\", \"params\": {}, \"priority\": \"normal\"}'"
     echo ""
-    echo -e "  ${CYAN}Check task status:${NC}"
-    echo "    curl http://localhost:8100/tasks/<request_id>"
-    echo ""
-    echo -e "  ${CYAN}View logs:${NC}"
-    echo "    tail -f .logs/supervisor.log"
-    echo "    tail -f .logs/worker-email.log"
-    echo "    tail -f .logs/worker-research.log"
-    echo ""
-    echo -e "  ${CYAN}Stop everything:${NC}"
-    echo "    ./scripts/start.sh stop"
+    echo -e "  ${CYAN}Stop everything:${NC}  ./scripts/start.sh stop"
+    echo -e "  ${CYAN}View logs:${NC}        tail -f .logs/supervisor.log"
     echo ""
 }
 

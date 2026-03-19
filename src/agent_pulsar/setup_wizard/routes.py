@@ -170,3 +170,54 @@ async def step_start(request: Request) -> HTMLResponse:
 async def step_test(request: Request) -> HTMLResponse:
     """Step 4: Test & connect."""
     return templates.TemplateResponse(request=request, name="test.html", context={"step": 4})
+
+
+@router.post("/setup/4/connect-telegram")
+async def connect_telegram(request: Request) -> JSONResponse:
+    """Configure OpenClaw to use a Telegram bot token."""
+    import httpx
+
+    form = await request.form()
+    bot_token = str(form.get("bot_token", "")).strip()
+
+    if not bot_token or ":" not in bot_token:
+        return JSONResponse({"error": "Invalid bot token format"}, status_code=400)
+
+    # Verify the token with Telegram API
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://api.telegram.org/bot{bot_token}/getMe",
+                timeout=10.0,
+            )
+            if resp.status_code != 200:
+                return JSONResponse(
+                    {"error": "Telegram rejected this token. Check it's correct."},
+                    status_code=400,
+                )
+            bot_info = resp.json().get("result", {})
+            bot_name = bot_info.get("first_name", "your bot")
+            bot_username = bot_info.get("username", "")
+    except Exception as e:
+        return JSONResponse(
+            {"error": f"Could not reach Telegram API: {e}"}, status_code=500,
+        )
+
+    # Save bot token to .env for OpenClaw
+    env_path = Path(PROJECT_ROOT) / ".env"
+    lines = env_path.read_text().splitlines() if env_path.exists() else []
+
+    # Add/update the telegram bot token
+    updated = False
+    for i, line in enumerate(lines):
+        if line.startswith("AP_TELEGRAM_BOT_TOKEN="):
+            lines[i] = f"AP_TELEGRAM_BOT_TOKEN={bot_token}"
+            updated = True
+            break
+    if not updated:
+        lines.append(f"AP_TELEGRAM_BOT_TOKEN={bot_token}")
+    env_path.write_text("\n".join(lines) + "\n")
+
+    msg = f"Connected to @{bot_username} ({bot_name}). "
+    msg += "Open Telegram and send a message to your bot!"
+    return JSONResponse({"status": "connected", "message": msg})

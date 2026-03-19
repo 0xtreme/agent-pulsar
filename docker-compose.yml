@@ -25,5 +25,22 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  openclaw:
+    image: alpine/openclaw:latest
+    ports:
+      - "18789:18789"
+      - "18790:18790"
+    environment:
+      - OPENCLAW_GATEWAY_PORT=18789
+      - OPENCLAW_BRIDGE_PORT=18790
+      - OPENCLAW_GATEWAY_BIND=lan
+    volumes:
+      - openclaw_home:/home/user
+      - ./skills/agent-pulsar:/workspace/skills/agent-pulsar:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   pgdata:
+  openclaw_home:

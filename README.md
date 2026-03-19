@@ -176,22 +176,18 @@ All settings use the `AP_` environment variable prefix. Only authentication is r
 
 See `.env.example` for the full list with all options.
 
-## Connecting OpenClaw (Telegram)
+## Connecting Telegram
 
-Agent Pulsar uses [OpenClaw](https://github.com/openclaw/openclaw) as the user-facing chat layer. To connect via Telegram:
+OpenClaw (the chat layer) starts automatically with `./scripts/start.sh`. To connect Telegram:
 
-1. **Install OpenClaw** following their [setup guide](https://github.com/openclaw/openclaw#quick-start)
-2. **Copy the Agent Pulsar skill** into OpenClaw:
-   ```bash
-   cp -r skills/agent-pulsar/ <your-openclaw-dir>/skills/agent-pulsar/
-   ```
-3. **Connect Telegram** via the OpenClaw Control UI at `http://localhost:18789`
-4. **Set the webhook URL** in your `.env`:
-   ```bash
-   AP_OPENCLAW_WEBHOOK_URL=http://localhost:18789/hooks/agent
-   ```
+1. Open Telegram, search for **@BotFather**, send `/newbot`, follow the prompts
+2. Copy the bot token you receive
+3. Either:
+   - **Setup wizard**: paste the token in Step 4 (it validates and saves automatically)
+   - **Manual**: add `AP_TELEGRAM_BOT_TOKEN=<your-token>` to `.env` and configure in the OpenClaw UI at `http://localhost:18789`
+4. Send a message to your bot — Agent Pulsar handles the rest
 
-Now when you send a complex task via Telegram, OpenClaw routes it through Agent Pulsar automatically.
+The Agent Pulsar skill is pre-mounted into OpenClaw via Docker, so no manual file copying is needed.
 
 ## Managing Credentials (Config Portal)
 

@@ -3,9 +3,54 @@
 {% block content %}
 <div class="card">
     <h1>Step 4: Test & Connect</h1>
-    <h2>Submit a test task to verify everything works.</h2>
+    <h2>Everything is running. Let's connect Telegram.</h2>
 
-    <p>With services running, try submitting a task:</p>
+    <div style="margin: 1.5rem 0;">
+        <div class="check-item">
+            <span class="check-icon" style="color: #818cf8;">1</span>
+            <div>
+                <div class="check-name">Get a Telegram bot token</div>
+                <div class="check-msg">
+                    Open Telegram, search for <strong>@BotFather</strong>, send <code>/newbot</code>, and follow the prompts.
+                    Copy the bot token you receive.
+                </div>
+            </div>
+        </div>
+
+        <div class="check-item" style="margin-top: 0.5rem;">
+            <span class="check-icon" style="color: #818cf8;">2</span>
+            <div>
+                <div class="check-name">Connect your bot</div>
+                <div class="check-msg">
+                    Paste your bot token below and click Connect. This automatically configures OpenClaw to use your Telegram bot.
+                </div>
+            </div>
+        </div>
+
+        <form id="telegramForm" onsubmit="return connectTelegram(event)" style="margin-top: 1rem;">
+            <label for="bot_token">Telegram Bot Token</label>
+            <input type="text" id="bot_token" name="bot_token" placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+            <button type="submit" class="btn btn-primary btn-full" id="connectBtn">Connect Telegram Bot</button>
+        </form>
+
+        <div id="telegramStatus" style="margin-top: 1rem;"></div>
+
+        <div class="check-item" style="margin-top: 0.5rem;">
+            <span class="check-icon" style="color: #818cf8;">3</span>
+            <div>
+                <div class="check-name">Send a message</div>
+                <div class="check-msg">
+                    Open Telegram, find your bot, and send:
+                    <code>"Research the latest trends in AI agents"</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h1>Or test via command line</h1>
+    <h2>Submit a task directly to the Supervisor API.</h2>
 
     <pre>curl -X POST http://localhost:8100/tasks \
   -H "Content-Type: application/json" \
@@ -18,66 +63,17 @@
     "priority": "normal"
   }'</pre>
 
-    <p>You'll get a <code>request_id</code> back. Check its status:</p>
-    <pre>curl http://localhost:8100/tasks/&lt;request_id&gt;</pre>
-
-    <p>You can also try any task — the system handles it dynamically:</p>
-    <pre>curl -X POST http://localhost:8100/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "you",
-    "conversation_id": "test",
-    "intent": "cooking.find_recipe",
-    "raw_message": "Find me a quick pasta recipe for dinner",
-    "params": {"cuisine": "italian"},
-    "priority": "normal"
-  }'</pre>
-</div>
-
-<div class="card">
-    <h1>Connect via Telegram</h1>
-    <h2>Talk to Agent Pulsar from your phone.</h2>
-
-    <p>Agent Pulsar uses <strong>OpenClaw</strong> for messaging. To connect Telegram:</p>
-
-    <div class="check-item">
-        <span class="check-icon" style="color: #818cf8;">1</span>
-        <div>
-            <div class="check-name">Install OpenClaw</div>
-            <div class="check-msg">Follow the <a href="https://github.com/openclaw/openclaw" target="_blank" style="color: #818cf8;">OpenClaw setup guide</a></div>
-        </div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon" style="color: #818cf8;">2</span>
-        <div>
-            <div class="check-name">Register the Agent Pulsar skill</div>
-            <div class="check-msg"><code>cp -r skills/agent-pulsar/ &lt;openclaw-dir&gt;/skills/</code></div>
-        </div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon" style="color: #818cf8;">3</span>
-        <div>
-            <div class="check-name">Connect Telegram</div>
-            <div class="check-msg">Open OpenClaw Control UI at <code>http://localhost:18789</code> and add your Telegram bot token</div>
-        </div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon" style="color: #818cf8;">4</span>
-        <div>
-            <div class="check-name">Send a message</div>
-            <div class="check-msg">Open Telegram, message your bot, and try: "Research the latest AI trends and email me a summary"</div>
-        </div>
-    </div>
+    <p>Check status with: <code>curl http://localhost:8100/tasks/&lt;request_id&gt;</code></p>
 </div>
 
 <div class="card" style="text-align: center;">
     <div class="success-icon">&#9889;</div>
     <h1>You're all set!</h1>
-    <p>Agent Pulsar is running. You can ask it anything — from research and emails to custom tasks. The system dynamically figures out what to do.</p>
+    <p>Agent Pulsar is running. Ask it anything — the system dynamically figures out what to do.</p>
     <p style="font-size: 0.85rem; color: #64748b;">
-        Manage credentials: <code>http://localhost:8102</code> (Config Portal)<br>
-        Health check: <code>http://localhost:8100/health</code><br>
-        Docs: <a href="https://github.com/0xtreme/agent-pulsar" style="color: #818cf8;">GitHub</a>
+        OpenClaw UI: <code>http://localhost:18789</code><br>
+        Supervisor API: <code>http://localhost:8100</code><br>
+        Health check: <code>http://localhost:8100/health</code>
     </p>
 </div>
 
@@ -85,4 +81,39 @@
     <a href="/setup/3" class="btn btn-secondary">&larr; Back</a>
     <div></div>
 </div>
+
+<script>
+async function connectTelegram(e) {
+    e.preventDefault();
+    const btn = document.getElementById('connectBtn');
+    const status = document.getElementById('telegramStatus');
+    const token = document.getElementById('bot_token').value.trim();
+
+    if (!token || !token.includes(':')) {
+        status.innerHTML = '<div class="check-item"><span class="check-icon check-fail">&#10007;</span><div><div class="check-name">Invalid token</div><div class="check-msg">Token should look like: 123456789:ABCdefGHI...</div></div></div>';
+        return false;
+    }
+
+    btn.textContent = 'Connecting...';
+    btn.disabled = true;
+
+    const resp = await fetch('/setup/4/connect-telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `bot_token=${encodeURIComponent(token)}`
+    });
+
+    if (resp.ok) {
+        const data = await resp.json();
+        status.innerHTML = `<div class="check-item" style="border: 1px solid #22c55e;"><span class="check-icon check-pass">&#10003;</span><div><div class="check-name">Telegram connected!</div><div class="check-msg">${data.message}</div></div></div>`;
+        btn.textContent = 'Connected!';
+    } else {
+        const data = await resp.json();
+        status.innerHTML = `<div class="check-item"><span class="check-icon check-fail">&#10007;</span><div><div class="check-name">Connection failed</div><div class="check-msg">${data.error}</div></div></div>`;
+        btn.textContent = 'Try Again';
+        btn.disabled = false;
+    }
+    return false;
+}
+</script>
 {% endblock %}
