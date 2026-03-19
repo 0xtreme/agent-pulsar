@@ -84,9 +84,9 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     litellm_router = _create_litellm_router(settings.anthropic_api_key)
 
     # Components
-    decomposer = TaskDecomposer(litellm_router, settings.decomposition_model)
-    model_router = ModelRouter(litellm_router, settings.classification_model)
     registry = create_default_registry()
+    decomposer = TaskDecomposer(litellm_router, settings.decomposition_model, registry=registry)
+    model_router = ModelRouter(litellm_router, settings.classification_model)
     scheduler = TaskScheduler(event_bus, repository, registry)
     collector = ResultCollector(
         event_bus, repository, litellm_router, settings.openclaw_webhook_url

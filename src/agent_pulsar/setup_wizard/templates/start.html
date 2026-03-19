@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Start Services{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Step 3: Start Services</h1>
+    <h2>Start Agent Pulsar with a single command.</h2>
+
+    <p>Open a terminal in your Agent Pulsar directory and run:</p>
+
+    <pre>./scripts/start.sh</pre>
+
+    <p>This starts:</p>
+    <div class="check-item">
+        <span class="check-icon check-pass">&#9679;</span>
+        <div><div class="check-name">Redis</div><div class="check-msg">Event bus and cache (port 6379)</div></div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon check-pass">&#9679;</span>
+        <div><div class="check-name">PostgreSQL</div><div class="check-msg">Task state database (port 5432)</div></div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon check-pass">&#9679;</span>
+        <div><div class="check-name">Supervisor</div><div class="check-msg">Task decomposition and routing (port 8100)</div></div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon check-pass">&#9679;</span>
+        <div><div class="check-name">Email Worker</div><div class="check-msg">Drafts professional emails</div></div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon check-pass">&#9679;</span>
+        <div><div class="check-name">Research Worker</div><div class="check-msg">Researches topics, produces summaries</div></div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon check-pass">&#9679;</span>
+        <div><div class="check-name">General Worker</div><div class="check-msg">Handles any other task type dynamically</div></div>
+    </div>
+
+    <p style="margin-top: 1rem;">To check status: <code>./scripts/start.sh status</code></p>
+    <p>To stop: <code>./scripts/start.sh stop</code></p>
+</div>
+
+<div class="nav">
+    <a href="/setup/2" class="btn btn-secondary">&larr; Back</a>
+    <a href="/setup/4" class="btn btn-primary">Next: Test It &rarr;</a>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Test & Connect{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Step 4: Test & Connect</h1>
+    <h2>Submit a test task to verify everything works.</h2>
+
+    <p>With services running, try submitting a task:</p>
+
+    <pre>curl -X POST http://localhost:8100/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "you",
+    "conversation_id": "test",
+    "intent": "research.summarize",
+    "raw_message": "What is event-driven architecture?",
+    "params": {},
+    "priority": "normal"
+  }'</pre>
+
+    <p>You'll get a <code>request_id</code> back. Check its status:</p>
+    <pre>curl http://localhost:8100/tasks/&lt;request_id&gt;</pre>
+
+    <p>You can also try any task — the system handles it dynamically:</p>
+    <pre>curl -X POST http://localhost:8100/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "you",
+    "conversation_id": "test",
+    "intent": "cooking.find_recipe",
+    "raw_message": "Find me a quick pasta recipe for dinner",
+    "params": {"cuisine": "italian"},
+    "priority": "normal"
+  }'</pre>
+</div>
+
+<div class="card">
+    <h1>Connect via Telegram</h1>
+    <h2>Talk to Agent Pulsar from your phone.</h2>
+
+    <p>Agent Pulsar uses <strong>OpenClaw</strong> for messaging. To connect Telegram:</p>
+
+    <div class="check-item">
+        <span class="check-icon" style="color: #818cf8;">1</span>
+        <div>
+            <div class="check-name">Install OpenClaw</div>
+            <div class="check-msg">Follow the <a href="https://github.com/openclaw/openclaw" target="_blank" style="color: #818cf8;">OpenClaw setup guide</a></div>
+        </div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon" style="color: #818cf8;">2</span>
+        <div>
+            <div class="check-name">Register the Agent Pulsar skill</div>
+            <div class="check-msg"><code>cp -r skills/agent-pulsar/ &lt;openclaw-dir&gt;/skills/</code></div>
+        </div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon" style="color: #818cf8;">3</span>
+        <div>
+            <div class="check-name">Connect Telegram</div>
+            <div class="check-msg">Open OpenClaw Control UI at <code>http://localhost:18789</code> and add your Telegram bot token</div>
+        </div>
+    </div>
+    <div class="check-item">
+        <span class="check-icon" style="color: #818cf8;">4</span>
+        <div>
+            <div class="check-name">Send a message</div>
+            <div class="check-msg">Open Telegram, message your bot, and try: "Research the latest AI trends and email me a summary"</div>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="text-align: center;">
+    <div class="success-icon">&#9889;</div>
+    <h1>You're all set!</h1>
+    <p>Agent Pulsar is running. You can ask it anything — from research and emails to custom tasks. The system dynamically figures out what to do.</p>
+    <p style="font-size: 0.85rem; color: #64748b;">
+        Manage credentials: <code>http://localhost:8102</code> (Config Portal)<br>
+        Health check: <code>http://localhost:8100/health</code><br>
+        Docs: <a href="https://github.com/0xtreme/agent-pulsar" style="color: #818cf8;">GitHub</a>
+    </p>
+</div>
+
+<div class="nav">
+    <a href="/setup/3" class="btn btn-secondary">&larr; Back</a>
+    <div></div>
+</div>
+{% endblock %}

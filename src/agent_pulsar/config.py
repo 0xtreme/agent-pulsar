@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     config_portal_base_url: str = "http://localhost:8102"
     onboarding_link_ttl_seconds: int = 600
 
+    # --- Setup Wizard ---
+    setup_wizard_host: str = "0.0.0.0"
+    setup_wizard_port: int = 8103
+
 
 def get_settings() -> Settings:
     """Create and return a Settings instance (cached via lru_cache if needed)."""

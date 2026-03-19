@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Pulsar — {% block title %}Setup{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .container { max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
+        .logo { font-size: 1.5rem; font-weight: 700; color: #818cf8; margin-bottom: 2rem; }
+        .logo span { color: #e2e8f0; }
+
+        /* Stepper */
+        .stepper { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+        .step-dot { width: 2.5rem; height: 4px; border-radius: 2px; background: #334155; }
+        .step-dot.active { background: #818cf8; }
+        .step-dot.done { background: #22c55e; }
+
+        /* Card */
+        .card { background: #1e293b; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #f8fafc; }
+        h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #94a3b8; font-weight: 400; }
+        p { color: #94a3b8; margin-bottom: 1rem; line-height: 1.6; }
+
+        /* Form */
+        label { display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem; color: #cbd5e1; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 1rem; margin-bottom: 1rem; font-family: monospace; }
+        input:focus { outline: none; border-color: #818cf8; }
+
+        /* Buttons */
+        .btn { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; text-align: center; }
+        .btn-primary { background: #818cf8; color: #0f172a; }
+        .btn-primary:hover { background: #6366f1; }
+        .btn-secondary { background: #334155; color: #e2e8f0; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-full { width: 100%; }
+
+        /* Checks */
+        .check-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; background: #0f172a; }
+        .check-icon { font-size: 1.2rem; width: 1.5rem; text-align: center; }
+        .check-pass { color: #22c55e; }
+        .check-fail { color: #ef4444; }
+        .check-pending { color: #94a3b8; }
+        .check-name { font-weight: 600; color: #e2e8f0; }
+        .check-msg { font-size: 0.85rem; color: #94a3b8; }
+        .check-hint { font-size: 0.8rem; color: #f59e0b; margin-top: 0.25rem; }
+
+        /* Code */
+        code { background: #0f172a; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9rem; color: #818cf8; }
+        pre { background: #0f172a; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0; font-size: 0.85rem; color: #94a3b8; }
+
+        /* Nav */
+        .nav { display: flex; justify-content: space-between; margin-top: 1.5rem; }
+
+        /* Success */
+        .success-icon { font-size: 3rem; text-align: center; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">&#9889; <span>Agent Pulsar</span> Setup</div>
+        {% block stepper %}
+        <div class="stepper">
+            <div class="step-dot {% if step >= 1 %}{% if step > 1 %}done{% else %}active{% endif %}{% endif %}"></div>
+            <div class="step-dot {% if step >= 2 %}{% if step > 2 %}done{% else %}active{% endif %}{% endif %}"></div>
+            <div class="step-dot {% if step >= 3 %}{% if step > 3 %}done{% else %}active{% endif %}{% endif %}"></div>
+            <div class="step-dot {% if step >= 4 %}active{% endif %}"></div>
+        </div>
+        {% endblock %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

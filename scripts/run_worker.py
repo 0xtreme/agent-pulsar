@@ -17,6 +17,7 @@ from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
 from agent_pulsar.config import get_settings
 from agent_pulsar.event_bus.redis_streams import RedisStreamsBus
 from agent_pulsar.workers.email_worker import EmailWorker
+from agent_pulsar.workers.general_worker import GeneralWorker
 from agent_pulsar.workers.research_worker import ResearchWorker
 from agent_pulsar.workers.runner import WorkerRunner
 
@@ -34,6 +35,10 @@ WORKERS = {
     "research": {
         "class": ResearchWorker,
         "topic": "task.backlog.research",
+    },
+    "general": {
+        "class": GeneralWorker,
+        "topic": "task.backlog.general",
     },
 }
 

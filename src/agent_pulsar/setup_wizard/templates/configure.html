@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Configure{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Step 2: Configure</h1>
+    <h2>Set your API key to connect to Claude.</h2>
+
+    {% if has_key %}
+    <div class="check-item">
+        <span class="check-icon check-pass">&#10003;</span>
+        <div>
+            <div class="check-name">API key already configured</div>
+            <div class="check-msg">Found in .env file. You can update it below or skip to the next step.</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <form id="configForm" onsubmit="return saveConfig(event)">
+        <label for="api_key">Anthropic API Key</label>
+        <input type="password" id="api_key" name="api_key" placeholder="sk-ant-..." {% if has_key %}value="sk-ant-***"{% endif %}>
+        <p style="font-size: 0.85rem;">Get your key at <a href="https://console.anthropic.com" target="_blank" style="color: #818cf8;">console.anthropic.com</a></p>
+
+        <button type="submit" class="btn btn-primary btn-full" id="saveBtn">Save Configuration</button>
+    </form>
+
+    <div id="saveStatus" style="margin-top: 1rem;"></div>
+</div>
+
+<p style="font-size: 0.85rem; margin-bottom: 1rem;">
+    <strong>That's the only required configuration.</strong> Redis, PostgreSQL, model selection, and all other settings have sensible defaults. See <code>.env.example</code> for the full list.
+</p>
+
+<div class="nav">
+    <a href="/setup/1" class="btn btn-secondary">&larr; Back</a>
+    <a href="/setup/3" class="btn btn-secondary" id="nextBtn">Next: Start Services &rarr;</a>
+</div>
+
+<script>
+async function saveConfig(e) {
+    e.preventDefault();
+    const btn = document.getElementById('saveBtn');
+    const status = document.getElementById('saveStatus');
+    const key = document.getElementById('api_key').value;
+
+    if (!key.startsWith('sk-')) {
+        status.innerHTML = '<div class="check-item"><span class="check-icon check-fail">&#10007;</span><div><div class="check-name">Invalid key format</div><div class="check-msg">Key should start with sk-</div></div></div>';
+        return false;
+    }
+
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    const resp = await fetch('/setup/2/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `api_key=${encodeURIComponent(key)}`
+    });
+
+    if (resp.ok) {
+        status.innerHTML = '<div class="check-item"><span class="check-icon check-pass">&#10003;</span><div><div class="check-name">Configuration saved</div><div class="check-msg">API key written to .env</div></div></div>';
+        btn.textContent = 'Saved!';
+    } else {
+        const data = await resp.json();
+        status.innerHTML = `<div class="check-item"><span class="check-icon check-fail">&#10007;</span><div><div class="check-name">Error</div><div class="check-msg">${data.error}</div></div></div>`;
+        btn.textContent = 'Try Again';
+        btn.disabled = false;
+    }
+    return false;
+}
+</script>
+{% endblock %}

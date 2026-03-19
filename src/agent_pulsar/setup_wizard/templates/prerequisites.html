@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Prerequisites{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Step 1: Prerequisites</h1>
+    <h2>Let's make sure you have everything needed.</h2>
+
+    <div id="checks">
+        <div class="check-item">
+            <span class="check-icon check-pending">&#9675;</span>
+            <div>
+                <div class="check-name">Checking prerequisites...</div>
+                <div class="check-msg">Click the button below to run checks</div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="runChecks()" id="checkBtn" style="margin-top: 1rem;">
+        Run Checks
+    </button>
+</div>
+
+<div class="nav">
+    <div></div>
+    <a href="/setup/2" class="btn btn-secondary" id="nextBtn" style="display:none;">Next: Configure &rarr;</a>
+</div>
+
+<script>
+async function runChecks() {
+    const btn = document.getElementById('checkBtn');
+    btn.textContent = 'Checking...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('/setup/1/check', { method: 'POST' });
+        const data = await resp.json();
+
+        const container = document.getElementById('checks');
+        container.innerHTML = '';
+
+        data.checks.forEach(check => {
+            const icon = check.passed ? '&#10003;' : '&#10007;';
+            const cls = check.passed ? 'check-pass' : 'check-fail';
+            let html = `
+                <div class="check-item">
+                    <span class="check-icon ${cls}">${icon}</span>
+                    <div>
+                        <div class="check-name">${check.name}</div>
+                        <div class="check-msg">${check.message}</div>
+                        ${check.fix_hint && !check.passed ? `<div class="check-hint">${check.fix_hint}</div>` : ''}
+                    </div>
+                </div>`;
+            container.innerHTML += html;
+        });
+
+        if (data.all_passed) {
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            btn.textContent = 'All checks passed!';
+            btn.className = 'btn btn-secondary btn-full';
+        } else {
+            btn.textContent = 'Re-run Checks';
+            btn.disabled = false;
+        }
+    } catch (e) {
+        btn.textContent = 'Error — try again';
+        btn.disabled = false;
+    }
+}
+</script>
+{% endblock %}

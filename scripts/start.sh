@@ -158,6 +158,11 @@ start_services() {
     echo $! > "$PID_DIR/worker-research.pid"
     ok "Research Worker started (pid $(cat "$PID_DIR/worker-research.pid"))"
 
+    uv run python scripts/run_worker.py general \
+        > "$LOG_DIR/worker-general.log" 2>&1 &
+    echo $! > "$PID_DIR/worker-general.pid"
+    ok "General Worker started (pid $(cat "$PID_DIR/worker-general.pid"))"
+
     # Wait for supervisor to be ready
     log "Waiting for Supervisor API..."
     for i in $(seq 1 10); do
