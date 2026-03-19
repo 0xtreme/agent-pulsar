@@ -166,6 +166,71 @@ async def step_start(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request=request, name="start.html", context={"step": 3})
 
 
+@router.post("/setup/3/start")
+async def start_services() -> JSONResponse:
+    """Start all Agent Pulsar services via start.sh."""
+    import asyncio
+
+    start_script = Path(PROJECT_ROOT) / "scripts" / "start.sh"
+    if not start_script.exists():
+        return JSONResponse(
+            {"error": "start.sh not found"}, status_code=500,
+        )
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "bash", str(start_script),
+            cwd=PROJECT_ROOT,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env={
+                **os.environ,
+                "PATH": f"{Path.home()}/.local/bin:/usr/local/bin"
+                f":/opt/homebrew/bin:{os.environ.get('PATH', '')}",
+            },
+        )
+        stdout_bytes, _ = await asyncio.wait_for(proc.communicate(), timeout=120)
+        output = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+
+        if proc.returncode == 0:
+            return JSONResponse({"status": "started", "output": output})
+        return JSONResponse(
+            {"error": f"start.sh exited with code {proc.returncode}", "output": output},
+            status_code=500,
+        )
+    except TimeoutError:
+        return JSONResponse(
+            {"error": "Startup timed out after 120 seconds"}, status_code=500,
+        )
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.post("/setup/3/status")
+async def check_services() -> JSONResponse:
+    """Check if services are running."""
+    import httpx
+
+    checks = {}
+    # Supervisor
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("http://localhost:8100/health", timeout=3.0)
+            checks["supervisor"] = resp.status_code == 200
+    except Exception:
+        checks["supervisor"] = False
+
+    # OpenClaw
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("http://localhost:18789", timeout=3.0)
+            checks["openclaw"] = resp.status_code == 200
+    except Exception:
+        checks["openclaw"] = False
+
+    return JSONResponse({"services": checks, "all_running": all(checks.values())})
+
+
 @router.get("/setup/4", response_class=HTMLResponse)
 async def step_test(request: Request) -> HTMLResponse:
     """Step 4: Test & connect."""

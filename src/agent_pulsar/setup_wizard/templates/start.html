@@ -3,44 +3,101 @@
 {% block content %}
 <div class="card">
     <h1>Step 3: Start Services</h1>
-    <h2>Start Agent Pulsar with a single command.</h2>
+    <h2>Launch Agent Pulsar with one click.</h2>
 
-    <p>Open a terminal in your Agent Pulsar directory and run:</p>
+    <p>This starts Redis, PostgreSQL, OpenClaw, the Supervisor, and all workers.</p>
 
-    <pre>./scripts/start.sh</pre>
+    <button class="btn btn-primary btn-full" id="startBtn" onclick="startServices()" style="margin: 1rem 0; padding: 1rem; font-size: 1.1rem;">
+        Start Agent Pulsar
+    </button>
 
-    <p>This starts:</p>
-    <div class="check-item">
-        <span class="check-icon check-pass">&#9679;</span>
-        <div><div class="check-name">Redis</div><div class="check-msg">Event bus and cache (port 6379)</div></div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon check-pass">&#9679;</span>
-        <div><div class="check-name">PostgreSQL</div><div class="check-msg">Task state database (port 5432)</div></div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon check-pass">&#9679;</span>
-        <div><div class="check-name">Supervisor</div><div class="check-msg">Task decomposition and routing (port 8100)</div></div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon check-pass">&#9679;</span>
-        <div><div class="check-name">Email Worker</div><div class="check-msg">Drafts professional emails</div></div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon check-pass">&#9679;</span>
-        <div><div class="check-name">Research Worker</div><div class="check-msg">Researches topics, produces summaries</div></div>
-    </div>
-    <div class="check-item">
-        <span class="check-icon check-pass">&#9679;</span>
-        <div><div class="check-name">General Worker</div><div class="check-msg">Handles any other task type dynamically</div></div>
+    <div id="startOutput" style="display: none;">
+        <pre id="outputLog" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;"></pre>
     </div>
 
-    <p style="margin-top: 1rem;">To check status: <code>./scripts/start.sh status</code></p>
-    <p>To stop: <code>./scripts/start.sh stop</code></p>
+    <div id="serviceStatus" style="margin-top: 1rem;"></div>
+</div>
+
+<div class="card" id="servicesCard" style="display: none;">
+    <h2>Services</h2>
+    <div id="serviceChecks"></div>
 </div>
 
 <div class="nav">
     <a href="/setup/2" class="btn btn-secondary">&larr; Back</a>
-    <a href="/setup/4" class="btn btn-primary">Next: Test It &rarr;</a>
+    <a href="/setup/4" class="btn btn-primary" id="nextBtn" style="display:none;">Next: Connect Telegram &rarr;</a>
 </div>
+
+<script>
+async function startServices() {
+    const btn = document.getElementById('startBtn');
+    const output = document.getElementById('startOutput');
+    const log = document.getElementById('outputLog');
+
+    btn.textContent = 'Starting...';
+    btn.disabled = true;
+    output.style.display = 'block';
+    log.textContent = 'Starting services, this may take a minute...\n';
+
+    try {
+        const resp = await fetch('/setup/3/start', { method: 'POST' });
+        const data = await resp.json();
+
+        if (resp.ok) {
+            log.textContent = data.output || 'Services started successfully.';
+            btn.textContent = 'Started!';
+            btn.className = 'btn btn-secondary btn-full';
+            // Check service status
+            setTimeout(checkStatus, 2000);
+        } else {
+            log.textContent = data.output || data.error;
+            btn.textContent = 'Retry';
+            btn.disabled = false;
+        }
+    } catch (e) {
+        log.textContent = 'Error: ' + e.message;
+        btn.textContent = 'Retry';
+        btn.disabled = false;
+    }
+}
+
+async function checkStatus() {
+    const card = document.getElementById('servicesCard');
+    const checks = document.getElementById('serviceChecks');
+    const status = document.getElementById('serviceStatus');
+
+    try {
+        const resp = await fetch('/setup/3/status', { method: 'POST' });
+        const data = await resp.json();
+
+        card.style.display = 'block';
+        checks.innerHTML = '';
+
+        const names = { supervisor: 'Supervisor (port 8100)', openclaw: 'OpenClaw (port 18789)' };
+        for (const [svc, running] of Object.entries(data.services)) {
+            const icon = running ? '&#10003;' : '&#10007;';
+            const cls = running ? 'check-pass' : 'check-fail';
+            checks.innerHTML += `
+                <div class="check-item">
+                    <span class="check-icon ${cls}">${icon}</span>
+                    <div>
+                        <div class="check-name">${names[svc] || svc}</div>
+                        <div class="check-msg">${running ? 'Running' : 'Not yet ready'}</div>
+                    </div>
+                </div>`;
+        }
+
+        if (data.all_running) {
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            status.innerHTML = '<div class="check-item" style="border: 1px solid #22c55e;"><span class="check-icon check-pass">&#10003;</span><div><div class="check-name">All services running!</div></div></div>';
+        } else {
+            status.innerHTML = '<p style="font-size: 0.85rem;">Some services are still starting. Checking again...</p>';
+            setTimeout(checkStatus, 3000);
+        }
+    } catch (e) {
+        status.innerHTML = '<p>Checking services...</p>';
+        setTimeout(checkStatus, 3000);
+    }
+}
+</script>
 {% endblock %}
