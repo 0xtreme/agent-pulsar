@@ -47,4 +47,4 @@ class Settings(BaseSettings):
 
 def get_settings() -> Settings:
     """Create and return a Settings instance (cached via lru_cache if needed)."""
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

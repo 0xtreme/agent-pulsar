@@ -10,7 +10,7 @@ from uuid import uuid4
 import fakeredis.aioredis
 import pytest
 
-from agent_pulsar.event_bus.redis_streams import RedisStreamsBus, DLQ_TOPIC
+from agent_pulsar.event_bus.redis_streams import DLQ_TOPIC, RedisStreamsBus
 from agent_pulsar.schemas.events import TaskRequest
 
 

@@ -7,13 +7,14 @@ GET  /health — Liveness/readiness probe
 
 from __future__ import annotations
 
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Request
 
-from agent_pulsar.schemas.enums import TaskStatus
-from agent_pulsar.schemas.events import TaskRequest
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from agent_pulsar.schemas.events import TaskRequest
 
 router = APIRouter()
 
@@ -87,7 +88,7 @@ async def health(request: Request) -> dict[str, Any]:
     try:
         engine = request.app.state.engine
         async with engine.connect() as conn:
-            await conn.execute("SELECT 1")  # type: ignore[arg-type]
+            await conn.execute("SELECT 1")  # noqa: S608
         checks["postgres"] = "ok"
     except Exception as e:
         checks["postgres"] = f"error: {e}"

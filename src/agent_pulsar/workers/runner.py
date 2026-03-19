@@ -8,15 +8,17 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from litellm import Router as LiteLLMRouter
-
-from agent_pulsar.event_bus.base import EventBus
 from agent_pulsar.schemas.enums import TaskStatus
 from agent_pulsar.schemas.events import AtomicTask, TaskResult
 from agent_pulsar.workers.base import ExecutionContext, SkillWorker
+
+if TYPE_CHECKING:
+    from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
+
+    from agent_pulsar.event_bus.base import EventBus
 
 logger = logging.getLogger(__name__)
 

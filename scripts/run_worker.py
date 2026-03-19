@@ -12,7 +12,7 @@ import asyncio
 import logging
 import sys
 
-from litellm import Router as LiteLLMRouter
+from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
 
 from agent_pulsar.config import get_settings
 from agent_pulsar.event_bus.redis_streams import RedisStreamsBus

@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from litellm import Router
-
-from agent_pulsar.schemas.enums import ExecutionTier, Priority
 from agent_pulsar.schemas.events import AtomicTask, TaskRequest
+
+if TYPE_CHECKING:
+    from litellm import Router  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class TaskDecomposer:
             temperature=0.0,
             max_tokens=2000,
         )
-        content = response.choices[0].message.content.strip()
+        content = (response.choices[0].message.content or "").strip()
 
         # Handle markdown code blocks
         if content.startswith("```"):

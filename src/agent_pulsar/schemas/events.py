@@ -13,12 +13,10 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_pulsar.schemas.enums import (
-    ComplexityTier,
     ExecutionTier,
     Priority,
     TaskStatus,
 )
-
 
 # ---------------------------------------------------------------------------
 # Supporting models

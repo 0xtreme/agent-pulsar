@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from agent_pulsar.persistence.models import AtomicTaskRecord, TaskRequestRecord
 from agent_pulsar.schemas.enums import TaskStatus
-from agent_pulsar.schemas.events import AtomicTask, TaskRequest
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    from agent_pulsar.schemas.events import AtomicTask, TaskRequest
 
 
 class TaskRepository:
@@ -94,13 +99,13 @@ class TaskRepository:
         task_id: UUID,
         status: TaskStatus,
         *,
-        output: dict | None = None,
+        output: dict[str, Any] | None = None,
         error: str | None = None,
         duration_ms: int | None = None,
         retry_count: int | None = None,
     ) -> None:
         """Update the status and result of an atomic task."""
-        values: dict = {"status": status.value}
+        values: dict[str, Any] = {"status": status.value}
         if output is not None:
             values["output"] = output
         if error is not None:

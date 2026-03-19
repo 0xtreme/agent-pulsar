@@ -69,7 +69,7 @@ class TestTaskRequest:
         )
         try:
             req.user_id = "new"  # type: ignore[misc]
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except Exception:
             pass  # Expected — model is frozen
 

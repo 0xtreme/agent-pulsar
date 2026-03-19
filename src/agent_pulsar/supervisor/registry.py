@@ -7,7 +7,7 @@ each type of task and what execution constraints apply.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from agent_pulsar.schemas.enums import ComplexityTier, ExecutionTier
 
@@ -48,8 +48,9 @@ class SkillRegistry:
         """
         best: SkillEntry | None = None
         for prefix, entry in self._entries.items():
-            if task_type.startswith(prefix):
-                if best is None or len(prefix) > len(best.task_type_prefix):
+            if task_type.startswith(prefix) and (
+                best is None or len(prefix) > len(best.task_type_prefix)
+            ):
                     best = entry
         return best
 

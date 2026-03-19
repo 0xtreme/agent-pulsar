@@ -7,13 +7,16 @@ logic and failure cascading.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from agent_pulsar.event_bus.base import EventBus
-from agent_pulsar.persistence.repository import TaskRepository
 from agent_pulsar.schemas.enums import TaskStatus
 from agent_pulsar.schemas.events import AtomicTask, TaskResult
-from agent_pulsar.supervisor.registry import SkillRegistry
+
+if TYPE_CHECKING:
+    from agent_pulsar.event_bus.base import EventBus
+    from agent_pulsar.persistence.repository import TaskRepository
+    from agent_pulsar.supervisor.registry import SkillRegistry
 
 logger = logging.getLogger(__name__)
 

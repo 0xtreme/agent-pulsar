@@ -6,21 +6,19 @@ Wires up all components and starts background event consumers.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Any
-from uuid import UUID
 
 from fastapi import FastAPI
-from litellm import Router as LiteLLMRouter
+from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
 
 from agent_pulsar.config import get_settings
 from agent_pulsar.event_bus.redis_streams import RedisStreamsBus
 from agent_pulsar.persistence.database import create_engine, create_session_factory
 from agent_pulsar.persistence.repository import TaskRepository
 from agent_pulsar.schemas.enums import TaskStatus
-from agent_pulsar.schemas.events import AtomicTask, TaskRequest, TaskResult
+from agent_pulsar.schemas.events import TaskRequest, TaskResult
 from agent_pulsar.supervisor.api import router as api_router
 from agent_pulsar.supervisor.collector import ResultCollector
 from agent_pulsar.supervisor.decomposer import TaskDecomposer
@@ -104,7 +102,10 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     # --- Background consumers ---
     consumer_tasks = [
         asyncio.create_task(
-            _consume_submitted(event_bus, settings, decomposer, model_router, registry, repository, scheduler),
+            _consume_submitted(
+                event_bus, settings, decomposer, model_router,
+                registry, repository, scheduler,
+            ),
             name="consumer-task-submitted",
         ),
         asyncio.create_task(

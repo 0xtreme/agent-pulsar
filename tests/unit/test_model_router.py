@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from agent_pulsar.schemas.enums import ComplexityTier
 from agent_pulsar.supervisor.model_router import MODEL_TIERS, ModelRouter
 

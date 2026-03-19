@@ -60,7 +60,7 @@ class ResearchWorker(SkillWorker):
             max_tokens=1500,
         )
 
-        summary = response.choices[0].message.content.strip()
+        summary = (response.choices[0].message.content or "").strip()
 
         return TaskResult(
             task_id=task.task_id,

@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from litellm import Router as LiteLLMRouter
+if TYPE_CHECKING:
+    from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
 
-from agent_pulsar.schemas.enums import ComplexityTier, ExecutionTier
-from agent_pulsar.schemas.events import AtomicTask, TaskResult
+    from agent_pulsar.schemas.enums import ComplexityTier, ExecutionTier
+    from agent_pulsar.schemas.events import AtomicTask, TaskResult
 
 
 @dataclass

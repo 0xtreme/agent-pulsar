@@ -7,16 +7,18 @@ generates a user-facing summary and notifies OpenClaw via webhook.
 from __future__ import annotations
 
 import logging
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 import httpx
-from litellm import Router
 
-from agent_pulsar.event_bus.base import EventBus
-from agent_pulsar.persistence.repository import TaskRepository
 from agent_pulsar.schemas.enums import TaskStatus
 from agent_pulsar.schemas.events import CompletionEvent, TaskResult
+
+if TYPE_CHECKING:
+    from litellm import Router  # type: ignore[attr-defined]
+
+    from agent_pulsar.event_bus.base import EventBus
+    from agent_pulsar.persistence.repository import TaskRepository
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +128,7 @@ class ResultCollector:
                 temperature=0.3,
                 max_tokens=200,
             )
-            return response.choices[0].message.content.strip()
+            return (response.choices[0].message.content or "").strip()
         except Exception as e:
             logger.warning("Summary generation failed: %s", e)
             completed = sum(1 for r in results if r.status == TaskStatus.COMPLETED)

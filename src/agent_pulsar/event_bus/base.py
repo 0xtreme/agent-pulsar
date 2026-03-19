@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 # Handler signature: (message_id, payload_dict) -> None
 MessageHandler = Callable[[str, dict[str, Any]], Awaitable[None]]

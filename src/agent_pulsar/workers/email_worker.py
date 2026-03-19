@@ -58,7 +58,7 @@ class EmailWorker(SkillWorker):
             max_tokens=500,
         )
 
-        draft = response.choices[0].message.content.strip()
+        draft = (response.choices[0].message.content or "").strip()
 
         return TaskResult(
             task_id=task.task_id,

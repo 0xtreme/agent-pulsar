@@ -1,9 +1,9 @@
 """Enumerations used across Agent Pulsar."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """Lifecycle state of a task."""
 
     PENDING = "PENDING"          # Created, not yet dispatched
@@ -14,7 +14,7 @@ class TaskStatus(str, Enum):
     DLQ = "DLQ"                  # Moved to dead-letter queue
 
 
-class Priority(str, Enum):
+class Priority(StrEnum):
     """Task priority level."""
 
     NORMAL = "normal"
@@ -22,7 +22,7 @@ class Priority(str, Enum):
     CRITICAL = "critical"
 
 
-class ExecutionTier(str, Enum):
+class ExecutionTier(StrEnum):
     """Execution isolation level for a task."""
 
     HOT = "hot"    # In-process async, ~100ms startup, process-level isolation
@@ -30,7 +30,7 @@ class ExecutionTier(str, Enum):
     COLD = "cold"  # Fresh Docker container, ~5-10s startup (Phase 2)
 
 
-class ComplexityTier(str, Enum):
+class ComplexityTier(StrEnum):
     """Task complexity classification — drives model selection."""
 
     SIMPLE = "simple"      # Haiku-class: email send, calendar check, lookups

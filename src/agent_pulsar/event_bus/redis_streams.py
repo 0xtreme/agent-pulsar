@@ -11,12 +11,14 @@ import json
 import logging
 import random
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as aioredis
-from pydantic import BaseModel
 
 from agent_pulsar.event_bus.base import EventBus, MessageHandler
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +62,7 @@ class RedisStreamsBus(EventBus):
 
     async def publish(self, topic: str, message: BaseModel) -> str:
         payload = message.model_dump_json()
-        msg_id: str = await self.redis.xadd(  # type: ignore[assignment]
+        msg_id: str = await self.redis.xadd(
             topic, {"payload": payload}
         )
         logger.debug("Published to %s: %s", topic, msg_id)
@@ -201,7 +203,7 @@ class RedisStreamsBus(EventBus):
                 }
             )
         }
-        msg_id: str = await self.redis.xadd(DLQ_TOPIC, dlq_entry)  # type: ignore[assignment]
+        msg_id: str = await self.redis.xadd(DLQ_TOPIC, dlq_entry)  # type: ignore[arg-type]
         logger.info("Moved message to DLQ: %s (from %s)", msg_id, topic)
         return msg_id
 

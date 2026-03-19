@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -9,7 +11,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from agent_pulsar.config import Settings
+if TYPE_CHECKING:
+    from agent_pulsar.config import Settings
 
 
 def create_engine(settings: Settings) -> AsyncEngine:

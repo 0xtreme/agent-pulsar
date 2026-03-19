@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, ClassVar
-
-from litellm import Router
+from typing import TYPE_CHECKING, Any
 
 from agent_pulsar.schemas.enums import ComplexityTier
+
+if TYPE_CHECKING:
+    from litellm import Router  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +37,12 @@ You are a task complexity classifier. Given a task type and parameters,
 classify the complexity as one of: simple, moderate, complex.
 
 Guidelines:
-- simple: Single-step operations, lookups, sends, quick reads. Examples: send email, check calendar, simple search.
-- moderate: Multi-step reasoning, research, drafting, document processing. Examples: summarize research, draft report, analyze data.
-- complex: Sensitive operations, financial transactions, code generation, multi-system coordination. Examples: run payroll, file taxes, deploy code.
+- simple: Single-step operations, lookups, sends, quick reads.
+  Examples: send email, check calendar, simple search.
+- moderate: Multi-step reasoning, research, drafting, document processing.
+  Examples: summarize research, draft report, analyze data.
+- complex: Sensitive operations, financial transactions, code generation,
+  multi-system coordination. Examples: run payroll, file taxes, deploy code.
 
 Task type: {task_type}
 Parameters: {params}
@@ -87,7 +91,7 @@ class ModelRouter:
                 temperature=0.0,
                 max_tokens=50,
             )
-            content = response.choices[0].message.content.strip()
+            content = (response.choices[0].message.content or "").strip()
 
             # Parse the JSON response
             parsed = json.loads(content)
