@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Connected Services{% endblock %}
+{% block content %}
+<h1>Connected Services</h1>
+{% if services %}
+<ul style="list-style: none; margin-top: 1rem;">
+{% for service in services %}
+    <li style="padding: 0.75rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+        <span>{{ service }}</span>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No services connected yet.</p>
+{% endif %}
+{% endblock %}

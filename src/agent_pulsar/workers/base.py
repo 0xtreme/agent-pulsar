@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from agent_pulsar.schemas.enums import ComplexityTier, ExecutionTier
     from agent_pulsar.schemas.events import AtomicTask, TaskResult
+    from agent_pulsar.security.credential_provider import CredentialProvider
 
 
 @dataclass
@@ -27,6 +28,7 @@ class ExecutionContext:
     task: AtomicTask
     litellm_router: LiteLLMRouter
     model: str  # The assigned model for this task
+    credential_provider: CredentialProvider | None = None  # Phase 2
 
 
 class SkillWorker(ABC):

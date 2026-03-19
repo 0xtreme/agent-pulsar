@@ -44,6 +44,29 @@ class Settings(BaseSettings):
     event_bus_poll_ms: int = 1000
     max_retries: int = 3
 
+    # --- Vault (Phase 2) ---
+    vault_url: str | None = None
+    vault_token: str | None = None
+    vault_mount_point: str = "secret"
+
+    # --- Cold Tier Docker (Phase 2) ---
+    docker_network: str = "agent-pulsar-net"
+    cold_tier_mem_limit: str = "512m"
+    cold_tier_cpu_quota: int = 50000
+
+    # --- Token Broker (Phase 2) ---
+    token_broker_secret: str = "dev-secret-change-me"
+    token_broker_host: str = "0.0.0.0"
+    token_broker_port: int = 8101
+    token_broker_url: str = "http://localhost:8101"
+    default_token_ttl_seconds: int = 300
+
+    # --- Config Portal (Phase 2) ---
+    config_portal_host: str = "0.0.0.0"
+    config_portal_port: int = 8102
+    config_portal_base_url: str = "http://localhost:8102"
+    onboarding_link_ttl_seconds: int = 600
+
 
 def get_settings() -> Settings:
     """Create and return a Settings instance (cached via lru_cache if needed)."""

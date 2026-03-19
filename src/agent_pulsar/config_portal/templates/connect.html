@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Connect {{ service }}{% endblock %}
+{% block content %}
+<h1>Connect {{ service }}</h1>
+<p>Enter your API credentials below. They will be securely stored and never visible again.</p>
+<form method="post" action="/connect/{{ token }}">
+    <label for="api_key">API Key</label>
+    <input type="password" id="api_key" name="api_key" required placeholder="Enter your API key">
+
+    <label for="api_secret">API Secret (optional)</label>
+    <input type="password" id="api_secret" name="api_secret" placeholder="Enter your API secret">
+
+    <button type="submit">Save Credentials</button>
+</form>
+{% endblock %}

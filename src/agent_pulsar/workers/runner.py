@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
 
     from agent_pulsar.event_bus.base import EventBus
+    from agent_pulsar.security.credential_provider import CredentialProvider
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,15 @@ class WorkerRunner:
         event_bus: EventBus,
         litellm_router: LiteLLMRouter,
         consumer_group: str = "agent-pulsar-workers",
+        token_broker_url: str | None = None,
+        default_token_ttl: int = 300,
     ) -> None:
         self._worker = worker
         self._event_bus = event_bus
         self._litellm_router = litellm_router
         self._consumer_group = consumer_group
+        self._token_broker_url = token_broker_url
+        self._default_token_ttl = default_token_ttl
 
     async def run(self, topic: str) -> None:
         """Main loop — subscribe to topic and process tasks."""
@@ -69,15 +74,23 @@ class WorkerRunner:
         start = time.monotonic()
 
         try:
+            # Build credential provider if task needs credentials
+            credential_provider = self._build_credential_provider(task)
+
             # Create a fresh execution context per-task
             context = ExecutionContext(
                 task=task,
                 litellm_router=self._litellm_router,
                 model=task.model_assignment,
+                credential_provider=credential_provider,
             )
 
             # Execute
             result = await self._worker.execute(context)
+
+            # Release credentials after successful execution
+            if credential_provider is not None:
+                await credential_provider.release_credentials()
 
             # Publish result
             await self._event_bus.publish("task.results", result)
@@ -94,6 +107,13 @@ class WorkerRunner:
             elapsed = int((time.monotonic() - start) * 1000)
             logger.error("Task %s failed after %dms: %s", task.task_id, elapsed, e)
 
+            # Best-effort credential release on failure
+            if credential_provider is not None:
+                try:
+                    await credential_provider.release_credentials()
+                except Exception as release_err:
+                    logger.warning("Credential release failed: %s", release_err)
+
             # Publish failure result
             error_result = TaskResult(
                 task_id=task.task_id,
@@ -105,3 +125,20 @@ class WorkerRunner:
                 duration_ms=elapsed,
             )
             await self._event_bus.publish("task.results", error_result)
+
+    def _build_credential_provider(
+        self, task: AtomicTask
+    ) -> CredentialProvider | None:
+        """Build a credential provider if the task needs credentials."""
+        if not task.credential_ref or not self._token_broker_url:
+            return None
+
+        from agent_pulsar.security.credential_provider import (
+            TokenBrokerCredentialProvider,
+        )
+
+        return TokenBrokerCredentialProvider(
+            user_id=task.request_id.hex[:16],  # Derive from request context
+            broker_url=self._token_broker_url,
+            ttl_seconds=self._default_token_ttl,
+        )

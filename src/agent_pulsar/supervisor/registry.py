@@ -71,8 +71,9 @@ class SkillRegistry:
 
 
 def create_default_registry() -> SkillRegistry:
-    """Create a registry with the default Phase 1 skill entries."""
+    """Create a registry with all registered skill entries."""
     registry = SkillRegistry()
+    # Phase 1
     registry.register(
         SkillEntry(
             task_type_prefix="email",
@@ -87,6 +88,23 @@ def create_default_registry() -> SkillRegistry:
             topic="task.backlog.research",
             default_tier=ExecutionTier.WARM,
             min_capability=ComplexityTier.MODERATE,
+        )
+    )
+    # Phase 2
+    registry.register(
+        SkillEntry(
+            task_type_prefix="payroll",
+            topic="task.backlog.payroll",
+            default_tier=ExecutionTier.COLD,
+            min_capability=ComplexityTier.COMPLEX,
+        )
+    )
+    registry.register(
+        SkillEntry(
+            task_type_prefix="calendar",
+            topic="task.backlog.calendar",
+            default_tier=ExecutionTier.HOT,
+            min_capability=ComplexityTier.SIMPLE,
         )
     )
     return registry

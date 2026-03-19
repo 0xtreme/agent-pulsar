@@ -27,6 +27,15 @@ Available worker types:
 - email.draft: Draft an email without sending
 - research.summarize: Research a topic and produce a summary
 - research.analyze: Deep analysis of a topic
+- payroll.run: Run payroll for a company/period
+- payroll.fetch_employees: Fetch employee list
+- payroll.calculate: Calculate payroll amounts
+- payroll.submit: Submit payroll batch
+- payroll.send_payslips: Generate and send payslips
+- calendar.read: List calendar events for a date/range
+- calendar.create_event: Create a new calendar event
+- calendar.update_event: Modify an existing event
+- calendar.delete_event: Remove a calendar event
 
 Rules:
 1. Each sub-task must have a "type" matching one of the available worker types.
