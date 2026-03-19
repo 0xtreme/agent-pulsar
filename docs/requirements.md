@@ -1,7 +1,8 @@
 # Agent Pulsar — Requirements & Architecture Specification
 
 > Event-driven AI agent orchestration framework
-> Version: 0.3 draft | Last updated: 2026-03-19
+> Version: 0.4 | Last updated: 2026-03-19
+> Phase 1: COMPLETE | Phase 2: COMPLETE
 
 ---
 

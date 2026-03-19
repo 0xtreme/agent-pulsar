@@ -1,6 +1,7 @@
 # Agent Pulsar -- System Design Document
 
-> Version: 0.1.0 | Last updated: 2026-03-19
+> Version: 0.2.0 | Last updated: 2026-03-19
+> Phase 1: COMPLETE | Phase 2: COMPLETE
 
 ---
 
@@ -295,12 +296,18 @@ Phase 1 proves the core decomposition-to-execution loop end to end.
 - Supervisor HTTP API (POST /tasks, GET /tasks/{id}, GET /health)
 - DLQ for failed messages (basic -- full retry logic in Phase 3)
 
-### NOT Included in Phase 1
+### Completed in Phase 2
 
-- HashiCorp Vault / Token Broker / credential isolation (Phase 2)
-- Config Portal for credential onboarding (Phase 2)
-- Cold tier / Docker container execution (Phase 2)
-- Payroll Worker, Calendar Worker (Phase 2)
+- HashiCorp Vault client abstraction (HvacVaultClient + MemoryVaultClient)
+- Token Broker service (JWT issuance/revocation backed by Vault)
+- Credential Provider protocol for workers
+- Config Portal for credential onboarding (one-time links, Vault storage)
+- Cold tier / Docker container execution (DockerTaskRunner)
+- Payroll Worker (cold tier, COMPLEX capability)
+- Calendar Worker (hot tier, SIMPLE capability)
+
+### NOT Yet Implemented (Phase 3+)
+
 - Kafka migration (Phase 3)
 - Schema Registry (Phase 3)
 - Kubernetes deployment (Phase 3)

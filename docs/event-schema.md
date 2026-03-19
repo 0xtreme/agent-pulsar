@@ -1,6 +1,6 @@
 # Agent Pulsar -- Event Bus Message Schemas
 
-> Version: 0.1.0 | Last updated: 2026-03-19
+> Version: 0.2.0 | Last updated: 2026-03-19
 > Source of truth: `src/agent_pulsar/schemas/events.py` and `src/agent_pulsar/schemas/enums.py`
 
 All inter-component communication in Agent Pulsar flows through the event bus. This document defines every topic, its Pydantic schema, consumer group assignments, and lifecycle semantics.

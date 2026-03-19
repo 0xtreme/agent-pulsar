@@ -1,6 +1,6 @@
 # Agent Pulsar -- Development Guide
 
-> Version: 0.1.0 | Last updated: 2026-03-19
+> Version: 0.2.0 | Last updated: 2026-03-19
 
 ---
 
@@ -197,6 +197,73 @@ Use the OpenClaw Control UI (`http://localhost:18789`) to connect a messaging ch
 
 ---
 
+## Phase 2 Services
+
+### Token Broker
+
+The Token Broker issues scoped JWT tokens backed by Vault secrets. Workers request tokens to access external API credentials.
+
+```bash
+uv run uvicorn agent_pulsar.security.broker_api:router --host 0.0.0.0 --port 8101 --reload
+```
+
+In dev mode (no Vault configured), the Token Broker uses `MemoryVaultClient`. Seed test credentials via the Config Portal or programmatically.
+
+### Config Portal
+
+The Config Portal provides a web UI for secure credential onboarding.
+
+```bash
+uv run uvicorn agent_pulsar.config_portal.app:app --host 0.0.0.0 --port 8102 --reload
+```
+
+Visit `http://localhost:8102` to access the portal. Generate onboarding links via:
+
+```bash
+curl -X POST http://localhost:8102/api/links/generate \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "pavi", "service": "xero"}'
+```
+
+Open the returned URL in a browser to submit credentials.
+
+### HashiCorp Vault (optional for dev)
+
+Vault is optional in development — `MemoryVaultClient` is used when `AP_VAULT_URL` is not set. To test with real Vault:
+
+```bash
+# Start Vault in dev mode
+vault server -dev -dev-root-token-id="dev-token"
+
+# Configure Agent Pulsar
+export AP_VAULT_URL=http://127.0.0.1:8200
+export AP_VAULT_TOKEN=dev-token
+```
+
+### Cold Tier Workers (Docker)
+
+Cold-tier workers run in Docker containers. Build the payroll worker image:
+
+```bash
+docker build -t agent-pulsar-payroll:latest -f docker/payroll/Dockerfile .
+```
+
+Cold-tier execution is automatic — when a task has `execution_tier=COLD`, the WorkerRunner delegates to `DockerTaskRunner`.
+
+### Phase 2 Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AP_VAULT_URL` | None (uses MemoryVault) | HashiCorp Vault endpoint |
+| `AP_VAULT_TOKEN` | None | Vault auth token |
+| `AP_TOKEN_BROKER_SECRET` | `dev-secret-change-me` | JWT signing key (change in production!) |
+| `AP_TOKEN_BROKER_PORT` | `8101` | Token Broker port |
+| `AP_CONFIG_PORTAL_PORT` | `8102` | Config Portal port |
+| `AP_DOCKER_NETWORK` | `agent-pulsar-net` | Docker network for cold tier containers |
+| `AP_COLD_TIER_MEM_LIMIT` | `512m` | Container memory limit |
+
+---
+
 ## Running Tests
 
 ### Unit tests
@@ -254,6 +321,9 @@ agent-pulsar/
 |   +-- run_worker.py         # Worker launcher script
 |-- skills/                   # OpenClaw skill definitions
 |   +-- agent-pulsar/         # Agent Pulsar OpenClaw Skill
+|-- docker/                   # Docker files for cold-tier workers
+|   +-- payroll/
+|       +-- Dockerfile         # Payroll worker container image
 |-- src/
 |   +-- agent_pulsar/         # Main Python package
 |       |-- __init__.py
@@ -271,10 +341,32 @@ agent-pulsar/
 |       |   |-- database.py   # SQLAlchemy engine and session factory
 |       |   |-- models.py     # ORM models (TaskRequestRecord, AtomicTaskRecord)
 |       |   +-- repository.py # TaskRepository (CRUD operations)
+|       |-- security/         # Security layer (Phase 2)
+|       |   |-- __init__.py
+|       |   |-- vault_client.py      # VaultClient ABC + HvacVaultClient + MemoryVaultClient
+|       |   |-- token_broker.py      # TokenBroker (JWT issuance/revocation)
+|       |   |-- broker_api.py        # Token Broker HTTP API (FastAPI router)
+|       |   |-- credential_provider.py  # CredentialProvider protocol for workers
+|       |   +-- schemas.py           # TokenRequest, TokenResponse, RevokeRequest
+|       |-- config_portal/    # Credential onboarding UI (Phase 2)
+|       |   |-- __init__.py
+|       |   |-- app.py        # Config Portal FastAPI app
+|       |   |-- routes.py     # API + HTML routes
+|       |   |-- link_manager.py  # One-time URL generation via Redis
+|       |   |-- schemas.py    # Portal request/response models
+|       |   +-- templates/    # Jinja2 HTML templates
 |       |-- supervisor/       # Supervisor agent (Tier 2)
 |       |   +-- __init__.py
 |       +-- workers/          # Skill workers (Tier 3)
-|           +-- __init__.py
+|           |-- __init__.py
+|           |-- base.py       # SkillWorker ABC + ExecutionContext
+|           |-- runner.py     # WorkerRunner (subscribe + execute + publish)
+|           |-- docker_runner.py    # DockerTaskRunner (cold tier)
+|           |-- cold_entrypoint.py  # Container entrypoint for cold workers
+|           |-- email_worker.py     # Email Worker (hot, SIMPLE)
+|           |-- research_worker.py  # Research Worker (warm, MODERATE)
+|           |-- payroll_worker.py   # Payroll Worker (cold, COMPLEX)
+|           +-- calendar_worker.py  # Calendar Worker (hot, SIMPLE)
 |-- tests/
 |   |-- __init__.py
 |   |-- unit/                 # Unit tests (no external services)

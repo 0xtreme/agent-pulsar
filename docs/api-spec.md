@@ -1,6 +1,6 @@
 # Agent Pulsar -- Supervisor HTTP API Specification
 
-> Version: 0.1.0 | Last updated: 2026-03-19
+> Version: 0.2.0 | Last updated: 2026-03-19
 > Base URL: `http://localhost:8100` (configurable via `AP_SUPERVISOR_HOST` / `AP_SUPERVISOR_PORT`)
 
 ---
@@ -10,7 +10,7 @@
 | Phase | Mechanism | Details |
 |-------|-----------|---------|
 | Phase 1 | None | API is accessible without authentication. Intended for local development and the co-located OpenClaw skill only. |
-| Phase 2+ | API Key | The Agent Pulsar OpenClaw Skill authenticates with a shared secret passed via the `Authorization: Bearer <api-key>` header. The key is stored in Vault and injected into the skill at startup. |
+| Phase 2 | API Key (planned) | The Agent Pulsar OpenClaw Skill will authenticate with a shared secret passed via the `Authorization: Bearer <api-key>` header. The key is stored in Vault and injected into the skill at startup. Token Broker and Config Portal are running but Supervisor auth is not yet enforced. |
 
 ---
 
@@ -496,3 +496,89 @@ All error responses use a consistent JSON structure:
   }
 }
 ```
+
+---
+
+## Phase 2 Services
+
+### Token Broker API
+
+> Base URL: `http://localhost:8101` (configurable via `AP_TOKEN_BROKER_HOST` / `AP_TOKEN_BROKER_PORT`)
+
+The Token Broker issues scoped, short-lived JWT tokens backed by Vault secrets. Workers request tokens to access external API credentials.
+
+#### POST /tokens/issue
+
+Issue a scoped JWT token for a worker.
+
+**Request Body:**
+
+```json
+{
+  "user_id": "pavi",
+  "credential_ref": "xero/payroll",
+  "scope": "payroll:write",
+  "ttl_seconds": 300
+}
+```
+
+**Response -- 200 OK:**
+
+```json
+{
+  "token": "eyJ...",
+  "jti": "a1b2c3d4-...",
+  "expires_at": "2026-03-19T15:35:00Z",
+  "credential_data": {
+    "api_key": "xk-...",
+    "api_secret": "xs-..."
+  }
+}
+```
+
+**Error -- 400:** Credentials not found in Vault for the given user/ref.
+
+#### POST /tokens/revoke
+
+Revoke an active token by JTI.
+
+**Request Body:** `{"jti": "a1b2c3d4-..."}`
+**Response -- 200:** `{"status": "revoked"}`
+**Error -- 404:** Token not found.
+
+#### GET /health
+
+**Response -- 200:** `{"status": "healthy", "active_tokens": 3}`
+
+---
+
+### Config Portal API
+
+> Base URL: `http://localhost:8102` (configurable via `AP_CONFIG_PORTAL_HOST` / `AP_CONFIG_PORTAL_PORT`)
+
+Secure credential onboarding for users. Generates one-time links, serves credential forms, stores secrets in Vault.
+
+#### POST /api/links/generate
+
+Generate a one-time onboarding link for a user + service.
+
+**Request Body:** `{"user_id": "pavi", "service": "xero"}`
+**Response -- 200:** `{"url": "http://localhost:8102/connect/<token>", "token": "...", "expires_in_seconds": 600}`
+
+#### GET /connect/{token}
+
+Render the credential submission form (HTML). Returns 400 if token is expired/invalid.
+
+#### POST /connect/{token}
+
+Submit credentials via form POST. Writes to Vault, invalidates the one-time token.
+
+**Form fields:** `api_key` (required), `api_secret` (optional)
+
+#### GET /api/connections/{user_id}
+
+List connected services. **Response:** `[{"service": "xero", "connected": true}]`
+
+#### DELETE /api/connections/{user_id}/{service}
+
+Disconnect a service (deletes credentials from Vault). **Response:** `{"status": "disconnected"}`
