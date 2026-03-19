@@ -14,8 +14,7 @@ from uuid import uuid4
 from agent_pulsar.schemas.events import AtomicTask, TaskRequest
 
 if TYPE_CHECKING:
-    from litellm import Router  # type: ignore[attr-defined]
-
+    from agent_pulsar.llm.client import LLMClient
     from agent_pulsar.supervisor.registry import SkillRegistry
 
 logger = logging.getLogger(__name__)
@@ -65,11 +64,11 @@ class TaskDecomposer:
 
     def __init__(
         self,
-        litellm_router: Router,
+        llm_client: LLMClient,
         model: str = "claude-opus-4-0-20250514",
         registry: SkillRegistry | None = None,
     ) -> None:
-        self._router = litellm_router
+        self._client = llm_client
         self._model = model
         self._registry = registry
 
@@ -105,7 +104,7 @@ class TaskDecomposer:
             intent=request.intent,
             params=json.dumps(request.params, default=str)[:1000],
         )
-        response = await self._router.acompletion(
+        response = await self._client.acompletion(
             model=self._model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,

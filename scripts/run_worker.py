@@ -14,6 +14,7 @@ import sys
 
 from agent_pulsar.config import get_settings
 from agent_pulsar.event_bus.redis_streams import RedisStreamsBus
+from agent_pulsar.llm.client import LLMClient
 from agent_pulsar.workers.email_worker import EmailWorker
 from agent_pulsar.workers.general_worker import GeneralWorker
 from agent_pulsar.workers.research_worker import ResearchWorker
@@ -54,14 +55,12 @@ async def main(worker_type: str) -> None:
     event_bus = RedisStreamsBus(settings.redis_url, settings.event_bus_poll_ms)
     await event_bus.connect()
 
-    # Create LiteLLM router (reuse supervisor's factory)
-    from agent_pulsar.supervisor.app import _create_litellm_router
-
-    litellm_router = _create_litellm_router(settings)
+    # Create LLM client (native SDKs)
+    llm_client = LLMClient.from_settings(settings)
 
     # Create worker
     worker = worker_config["class"]()
-    runner = WorkerRunner(worker, event_bus, litellm_router)
+    runner = WorkerRunner(worker, event_bus, llm_client)
 
     logger.info("Starting %s worker...", worker_type)
 

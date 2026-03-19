@@ -31,7 +31,7 @@ def _make_context(  # type: ignore[type-arg]
     mock_response.choices[0].message.content = "Here is a great pasta recipe."
     mock_router.acompletion = AsyncMock(return_value=mock_response)
     return ExecutionContext(
-        task=task, litellm_router=mock_router, model="claude-sonnet-4-0-20250514",
+        task=task, llm_client=mock_router, model="claude-sonnet-4-0-20250514",
     )
 
 

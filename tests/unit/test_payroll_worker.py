@@ -35,7 +35,7 @@ def _make_context(
 
     return ExecutionContext(
         task=task,
-        litellm_router=mock_router,
+        llm_client=mock_router,
         model="claude-opus-4-0-20250514",
         credential_provider=NoopCredentialProvider(),
     )

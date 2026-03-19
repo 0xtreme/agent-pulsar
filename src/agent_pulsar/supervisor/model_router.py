@@ -1,6 +1,6 @@
 """Model Router — classifies task complexity and assigns the cheapest viable model.
 
-Uses Haiku (via LiteLLM) for fast, cheap classification. Respects worker
+Uses Haiku (via native SDK) for fast, cheap classification. Respects worker
 minimum capability floors — e.g., a payroll worker may require Opus even
 if the Model Router classifies a sub-task as "simple".
 """
@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from agent_pulsar.schemas.enums import ComplexityTier
 
 if TYPE_CHECKING:
-    from litellm import Router  # type: ignore[attr-defined]
+    from agent_pulsar.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +56,10 @@ class ModelRouter:
 
     def __init__(
         self,
-        litellm_router: Router,
+        llm_client: LLMClient,
         classification_model: str = "claude-haiku-4-5-20250414",
     ) -> None:
-        self._router = litellm_router
+        self._client = llm_client
         self._classification_model = classification_model
 
     async def classify_and_assign(
@@ -85,7 +85,7 @@ class ModelRouter:
                 task_type=task_type,
                 params=json.dumps(params, default=str)[:500],  # Truncate large params
             )
-            response = await self._router.acompletion(
+            response = await self._client.acompletion(
                 model=self._classification_model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.0,

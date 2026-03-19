@@ -1,6 +1,6 @@
 """Email Worker — drafts emails using LLM.
 
-Phase 1: Uses LiteLLM to draft email content. Does NOT actually send
+Phase 1: Uses LLM to draft email content. Does NOT actually send
 (no MCP/Gmail integration). Real sending comes in Phase 2 with MCP.
 """
 
@@ -51,7 +51,7 @@ class EmailWorker(SkillWorker):
             to=to, subject=subject, context=body_context, tone=tone
         )
 
-        response = await context.litellm_router.acompletion(
+        response = await context.llm_client.acompletion(
             model=context.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,

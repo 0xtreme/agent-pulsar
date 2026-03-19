@@ -62,7 +62,14 @@ async def check_uv() -> CheckResult:
 
 async def check_llm_auth(project_root: str = ".") -> CheckResult:
     """Check if any LLM provider is configured."""
-    # Check environment variables
+    # Check for OAuth token first (subscription users)
+    oauth_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+    if oauth_token and oauth_token.startswith("sk-ant-oat"):
+        return CheckResult(
+            "LLM Auth", True, "Anthropic OAuth token configured (subscription)"
+        )
+
+    # Check environment variables for API keys
     env_checks = {
         "AP_ANTHROPIC_API_KEY": ("Anthropic", "sk-"),
         "AP_OPENAI_API_KEY": ("OpenAI", "sk-"),
@@ -81,6 +88,10 @@ async def check_llm_auth(project_root: str = ".") -> CheckResult:
             line = line.strip()
             if line.startswith("#"):
                 continue
+            if line.startswith("CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat"):
+                return CheckResult(
+                    "LLM Auth", True, "Anthropic OAuth token set in .env (subscription)"
+                )
             if line.startswith("AP_ANTHROPIC_API_KEY=sk-"):
                 return CheckResult("LLM Auth", True, "Anthropic API key set in .env")
             if line.startswith("AP_OPENAI_API_KEY=sk-"):

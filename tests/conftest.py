@@ -25,11 +25,17 @@ def mock_event_bus(fake_redis: fakeredis.aioredis.FakeRedis) -> RedisStreamsBus:
 
 
 @pytest.fixture
-def mock_litellm_router() -> MagicMock:
-    """Create a mock LiteLLM Router."""
+def mock_llm_client() -> MagicMock:
+    """Create a mock LLM client."""
     mock = MagicMock()
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = '{"complexity": "moderate"}'
     mock.acompletion = AsyncMock(return_value=mock_response)
     return mock
+
+
+# Backward compat alias
+@pytest.fixture
+def mock_litellm_router(mock_llm_client: MagicMock) -> MagicMock:
+    return mock_llm_client

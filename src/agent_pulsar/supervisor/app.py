@@ -11,10 +11,10 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
-from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
 
 from agent_pulsar.config import get_settings
 from agent_pulsar.event_bus.redis_streams import RedisStreamsBus
+from agent_pulsar.llm.client import LLMClient
 from agent_pulsar.persistence.database import create_engine, create_session_factory
 from agent_pulsar.persistence.repository import TaskRepository
 from agent_pulsar.schemas.enums import TaskStatus
@@ -27,75 +27,6 @@ from agent_pulsar.supervisor.registry import SkillRegistry, create_default_regis
 from agent_pulsar.supervisor.scheduler import TaskScheduler
 
 logger = logging.getLogger(__name__)
-
-
-def _create_litellm_router(settings: Any) -> LiteLLMRouter:
-    """Create a LiteLLM Router with LLM models.
-
-    Supports three providers via LiteLLM:
-    - anthropic: Anthropic API key → Claude models (default)
-    - openai: OpenAI API key → GPT models
-    - gemini: Google Gemini API key → Gemini models
-    """
-    provider = settings.llm_provider
-    model_list = []
-
-    if provider == "openai":
-        for model, role in [
-            ("gpt-4o-mini", "fast"),
-            ("gpt-4o", "balanced"),
-            ("gpt-4o", "capable"),
-        ]:
-            model_list.append({
-                "model_name": f"{role}-model",
-                "litellm_params": {
-                    "model": model,
-                    "api_key": settings.openai_api_key,
-                },
-            })
-    elif provider == "gemini":
-        for model, role in [
-            ("gemini/gemini-2.0-flash", "fast"),
-            ("gemini/gemini-2.5-pro", "balanced"),
-            ("gemini/gemini-2.5-pro", "capable"),
-        ]:
-            model_list.append({
-                "model_name": f"{role}-model",
-                "litellm_params": {
-                    "model": model,
-                    "api_key": settings.gemini_api_key,
-                },
-            })
-    else:  # anthropic (default)
-        for model, role in [
-            ("claude-haiku-4-5-20250414", "fast"),
-            ("claude-sonnet-4-0-20250514", "balanced"),
-            ("claude-opus-4-0-20250514", "capable"),
-        ]:
-            model_list.append({
-                "model_name": f"{role}-model",
-                "litellm_params": {
-                    "model": model,
-                    "api_key": settings.anthropic_api_key,
-                },
-            })
-
-        # Also register by original model name for backward compat
-        for model in [
-            "claude-haiku-4-5-20250414",
-            "claude-sonnet-4-0-20250514",
-            "claude-opus-4-0-20250514",
-        ]:
-            model_list.append({
-                "model_name": model,
-                "litellm_params": {
-                    "model": model,
-                    "api_key": settings.anthropic_api_key,
-                },
-            })
-
-    logger.info("LLM provider: %s (%d models configured)", provider, len(model_list))
-    return LiteLLMRouter(model_list=model_list, num_retries=2, timeout=120)
 
 
 @asynccontextmanager
@@ -118,16 +49,16 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     repository = TaskRepository(session_factory)
     app.state.repository = repository
 
-    # LiteLLM
-    litellm_router = _create_litellm_router(settings)
+    # LLM Client (native SDKs — supports API key and OAuth)
+    llm_client = LLMClient.from_settings(settings)
 
     # Components
     registry = create_default_registry()
-    decomposer = TaskDecomposer(litellm_router, settings.decomposition_model, registry=registry)
-    model_router = ModelRouter(litellm_router, settings.classification_model)
+    decomposer = TaskDecomposer(llm_client, settings.decomposition_model, registry=registry)
+    model_router = ModelRouter(llm_client, settings.classification_model)
     scheduler = TaskScheduler(event_bus, repository, registry)
     collector = ResultCollector(
-        event_bus, repository, litellm_router, settings.openclaw_webhook_url
+        event_bus, repository, llm_client, settings.openclaw_webhook_url
     )
 
     # Store for access in handlers
@@ -136,6 +67,7 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     app.state.registry = registry
     app.state.scheduler = scheduler
     app.state.collector = collector
+    app.state.llm_client = llm_client
 
     # --- Background consumers ---
     consumer_tasks = [

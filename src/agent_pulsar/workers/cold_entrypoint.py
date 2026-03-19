@@ -16,8 +16,8 @@ import os
 import sys
 import time
 
-from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
-
+from agent_pulsar.config import get_settings
+from agent_pulsar.llm.client import LLMClient
 from agent_pulsar.schemas.enums import ExecutionTier, TaskStatus
 from agent_pulsar.schemas.events import AtomicTask, TaskResult
 from agent_pulsar.security.credential_provider import TokenBrokerCredentialProvider
@@ -49,8 +49,8 @@ async def _run() -> None:
         print(json.dumps({"error": "AP_TASK_JSON not set"}), file=sys.stderr)  # noqa: T201
         sys.exit(1)
 
-    token_broker_url = os.environ.get("AP_TOKEN_BROKER_URL", "http://localhost:8101")
     model = os.environ.get("AP_MODEL", "claude-opus-4-0-20250514")
+    token_broker_url = os.environ.get("AP_TOKEN_BROKER_URL", "http://localhost:8101")
 
     task = AtomicTask.model_validate_json(task_json)
 
@@ -64,17 +64,13 @@ async def _run() -> None:
             broker_url=token_broker_url,
         )
 
-    # Build a minimal LiteLLM router
-    router = LiteLLMRouter(
-        model_list=[{
-            "model_name": model,
-            "litellm_params": {"model": model},
-        }]
-    )
+    # Build LLM client from settings
+    settings = get_settings()
+    llm_client = LLMClient.from_settings(settings)
 
     context = ExecutionContext(
         task=task,
-        litellm_router=router,
+        llm_client=llm_client,
         model=model,
         credential_provider=credential_provider,
     )

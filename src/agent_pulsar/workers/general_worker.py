@@ -60,7 +60,7 @@ class GeneralWorker(SkillWorker):
             raw_context=task.params.get("raw_message", task.type),
         )
 
-        response = await context.litellm_router.acompletion(
+        response = await context.llm_client.acompletion(
             model=context.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5,

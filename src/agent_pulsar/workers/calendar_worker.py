@@ -59,7 +59,7 @@ class CalendarWorker(SkillWorker):
             params=str(params),
         )
 
-        response = await context.litellm_router.acompletion(
+        response = await context.llm_client.acompletion(
             model=context.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,

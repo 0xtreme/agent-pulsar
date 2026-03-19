@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
-
+    from agent_pulsar.llm.client import LLMClient
     from agent_pulsar.schemas.enums import ComplexityTier, ExecutionTier
     from agent_pulsar.schemas.events import AtomicTask, TaskResult
     from agent_pulsar.security.credential_provider import CredentialProvider
@@ -26,7 +25,7 @@ class ExecutionContext:
     """
 
     task: AtomicTask
-    litellm_router: LiteLLMRouter
+    llm_client: LLMClient
     model: str  # The assigned model for this task
     credential_provider: CredentialProvider | None = None  # Phase 2
 

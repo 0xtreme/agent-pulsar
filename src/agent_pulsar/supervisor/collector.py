@@ -15,8 +15,7 @@ from agent_pulsar.schemas.enums import TaskStatus
 from agent_pulsar.schemas.events import CompletionEvent, TaskResult
 
 if TYPE_CHECKING:
-    from litellm import Router  # type: ignore[attr-defined]
-
+    from agent_pulsar.llm.client import LLMClient
     from agent_pulsar.event_bus.base import EventBus
     from agent_pulsar.persistence.repository import TaskRepository
 
@@ -38,12 +37,12 @@ class ResultCollector:
         self,
         event_bus: EventBus,
         repository: TaskRepository,
-        litellm_router: Router,
+        llm_client: LLMClient,
         openclaw_webhook_url: str,
     ) -> None:
         self._event_bus = event_bus
         self._repo = repository
-        self._router = litellm_router
+        self._client = llm_client
         self._webhook_url = openclaw_webhook_url
 
     async def handle_result(self, result: TaskResult) -> None:
@@ -117,8 +116,8 @@ class ResultCollector:
             results_json = "\n".join(
                 f"- {r.status.value}: {r.output}" for r in results
             )
-            response = await self._router.acompletion(
-                model="claude-haiku-4-5-20250414",
+            response = await self._client.acompletion(
+                model="fast-model",
                 messages=[
                     {
                         "role": "user",

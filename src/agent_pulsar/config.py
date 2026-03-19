@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # --- LLM Authentication (one of these is required) ---
     anthropic_api_key: str = ""  # Anthropic API key (sk-ant-...)
+    claude_oauth_token: str = ""  # OAuth token from `claude setup-token` (subscription)
     llm_provider: str = "anthropic"  # "anthropic", "openai", or "gemini"
 
     # OpenAI (set llm_provider=openai)

@@ -16,8 +16,7 @@ from agent_pulsar.schemas.events import AtomicTask, TaskResult
 from agent_pulsar.workers.base import ExecutionContext, SkillWorker
 
 if TYPE_CHECKING:
-    from litellm import Router as LiteLLMRouter  # type: ignore[attr-defined]
-
+    from agent_pulsar.llm.client import LLMClient
     from agent_pulsar.event_bus.base import EventBus
     from agent_pulsar.security.credential_provider import CredentialProvider
 
@@ -31,14 +30,14 @@ class WorkerRunner:
         self,
         worker: SkillWorker,
         event_bus: EventBus,
-        litellm_router: LiteLLMRouter,
+        llm_client: LLMClient,
         consumer_group: str = "agent-pulsar-workers",
         token_broker_url: str | None = None,
         default_token_ttl: int = 300,
     ) -> None:
         self._worker = worker
         self._event_bus = event_bus
-        self._litellm_router = litellm_router
+        self._llm_client = llm_client
         self._consumer_group = consumer_group
         self._token_broker_url = token_broker_url
         self._default_token_ttl = default_token_ttl
@@ -72,6 +71,7 @@ class WorkerRunner:
         )
 
         start = time.monotonic()
+        credential_provider = None
 
         try:
             # Build credential provider if task needs credentials
@@ -80,7 +80,7 @@ class WorkerRunner:
             # Create a fresh execution context per-task
             context = ExecutionContext(
                 task=task,
-                litellm_router=self._litellm_router,
+                llm_client=self._llm_client,
                 model=task.model_assignment,
                 credential_provider=credential_provider,
             )

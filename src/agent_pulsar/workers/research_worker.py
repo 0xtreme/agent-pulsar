@@ -1,6 +1,6 @@
 """Research Worker — generates research summaries using LLM.
 
-Phase 1: Uses LiteLLM to synthesize research from the model's training data.
+Phase 1: Uses LLM to synthesize research from the model's training data.
 Does NOT search the web (no MCP integration). Real web search comes in Phase 2.
 """
 
@@ -53,7 +53,7 @@ class ResearchWorker(SkillWorker):
 
         prompt = RESEARCH_PROMPT.format(topic=topic, depth=depth, focus=focus)
 
-        response = await context.litellm_router.acompletion(
+        response = await context.llm_client.acompletion(
             model=context.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5,
